@@ -1,0 +1,15 @@
+{
+  "name": "you-are-rhyme",
+  "version": "1.0.0",
+  "description": "Interactive installation exploring formactions via procedural physics",
+  "scripts": {
+    "start": "concurrently \"npm run start:server\" \"npm run start:client\" \"npm run start:python\"",
+    "start:server": "cd server && npm start",
+    "start:client": "cd client && npm run dev",
+    "start:python": "cd python && .\\.venv\\Scripts\\python transcriber.py",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
