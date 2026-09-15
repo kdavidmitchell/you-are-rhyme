@@ -2,9 +2,9 @@
 
 > A voice-driven physics game where the emotional weight, pace, and semantics of your spoken words literally shape the world.
 
-**you-are-rhyme** is an experimental interactive experience that chains local AI into a 2D physics engine. By translating vocal performance (via Whisper) and sentiment analysis (via Ollama) into a custom Domain Specific Language (DSL), the game turns your real-world emotions into real-time game mechanics—all within levels procedurally generated and validated by genetic algorithms.
+**you are rhyme** is an experimental interactive experience that chains local AI into a 2D physics engine. By translating vocal performance (via Whisper) and sentiment analysis (via Ollama) into a custom Domain Specific Language (DSL), the game turns your real-world emotions into real-time game mechanics—all within levels procedurally generated and validated by genetic algorithms.
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 The project is split into three main pillars:
 
@@ -25,7 +25,7 @@ Levels are not hand-crafted. They are generated and rigorously tested offline:
 * **Bot Tester:** A headless Matter.js worker thread that simulates the level against all 8 game mechanics. It uses a "Goldilocks" fitness function to ensure the level isn't trivial, but also isn't too open—rewarding levels that can be beaten in exactly 2-4 distinct ways.
 * **SQLite:** Validated levels are saved to `telemetry.sqlite` to be served to the frontend.
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 * [Node.js](https://nodejs.org/) (v18+)
@@ -63,5 +63,5 @@ Levels are not hand-crafted. They are generated and rigorously tested offline:
    ```
    *(Note: To procedurally generate new levels offline, run `cd server && node ga-runner.js`)*
 
-## 🧠 Telemetry & Logging
+## Telemetry & Logging
 All player turns—including raw transcriptions, LLM scores, and the resulting DSL commands—are logged to `telemetry.sqlite` to help fine-tune the Dominant Force compiler thresholds and analyze player behavior.
