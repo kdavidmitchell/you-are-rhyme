@@ -40,29 +40,28 @@ Levels are not hand-crafted. They are generated and rigorously tested offline:
    cd you-are-rhyme
    ```
 
-2. **Start the Python Transcriber:**
+2. **Setup the Python Environment:**
+   Because the startup script points to a local virtual environment, you must initialize it first:
    ```bash
    cd python
    python -m venv .venv
    # Activate venv (Windows: .venv\Scripts\activate | Mac/Linux: source .venv/bin/activate)
    pip install -r requirements.txt
-   python transcriber.py
+   cd ..
    ```
 
-3. **Start the Node Backend:**
+3. **Install Dependencies:**
+   A root helper script will automatically install the root, server, and client dependencies.
    ```bash
-   cd server
-   npm install
+   npm run install:all
+   ```
+
+4. **Spin Everything Up:**
+   Start the React frontend, Node backend, and Python transcriber all at once using `concurrently`.
+   ```bash
    npm start
    ```
-   *(Note: To generate new levels, you can run `node ga-runner.js`)*
-
-4. **Start the React Frontend:**
-   ```bash
-   cd client
-   npm install
-   npm run dev
-   ```
+   *(Note: To procedurally generate new levels offline, run `cd server && node ga-runner.js`)*
 
 ## 🧠 Telemetry & Logging
 All player turns—including raw transcriptions, LLM scores, and the resulting DSL commands—are logged to `telemetry.sqlite` to help fine-tune the Dominant Force compiler thresholds and analyze player behavior.
