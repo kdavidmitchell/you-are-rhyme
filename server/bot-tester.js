@@ -1,203 +1,165 @@
-const Matter = require('matter-js');
 const { parentPort, isMainThread } = require('worker_threads');
 
-const { Engine, Bodies, Composite, Events } = Matter;
+const hamletMechanics = ['Lunge', 'Feint', 'Pierce', 'Fracture'];
+const gertrudeMechanics = ['Solidify', 'Repel', 'Interpose', 'Disarm'];
 
-function buildWorld(engine, config) {
-    Composite.clear(engine.world);
-    Engine.clear(engine);
-    engine.world.gravity.x = config.gravityX || 0;
-    engine.world.gravity.y = config.gravityY !== undefined ? config.gravityY : 1;
-    
-    config.bodies.forEach(b => {
-        let body;
-        if (b.type === 'rectangle') {
-            body = Bodies.rectangle(b.x, b.y, b.w, b.h, b.options);
-        } else if (b.type === 'circle') {
-            body = Bodies.circle(b.x, b.y, b.r, b.options);
-        }
-        if (body) {
-            Composite.add(engine.world, body);
-        }
-    });
+function getEntity(entities, type) {
+    return entities.find(e => e.type === type);
 }
 
-function simulate(config, mechanicToApply = null) {
-    const engine = Engine.create();
-    buildWorld(engine, config);
+function simulateTurn(state, hamletMech, gertrudeMech) {
+    let rapier = getEntity(state, 'rapier');
+    let gertrude = getEntity(state, 'gertrude');
+    let polonius = getEntity(state, 'polonius');
+    let hamlet = getEntity(state, 'hamlet');
     
-    let collisionOccurred = false;
-    Events.on(engine, 'collisionStart', (event) => {
-        event.pairs.forEach(pair => {
-            const labelA = pair.bodyA.label;
-            const labelB = pair.bodyB.label;
-            
-            const isDaggerCrown = (labelA === 'dagger' && labelB === 'crown') ||
-                                  (labelB === 'dagger' && labelA === 'crown');
-                                  
-            const isCrownBoundary = (labelA === 'crown' && ['wall', 'ground', 'ceiling'].includes(labelB)) ||
-                                    (labelB === 'crown' && ['wall', 'ground', 'ceiling'].includes(labelA));
+    let rapierAttached = (hamlet.y === rapier.y && hamlet.x === rapier.x - 1);
+    let poloniusKilled = false;
 
-            if (isDaggerCrown || isCrownBoundary) {
-                collisionOccurred = true;
-            }
-        });
-    });
+    // --- GERTRUDE DEFENDS ---
+    if (gertrudeMech === 'Solidify') {
+        // Convert a random furniture to arras
+        const furnitures = state.filter(e => e.type === 'furniture');
+        if (furnitures.length > 0) {
+            furnitures[Math.floor(Math.random() * furnitures.length)].type = 'arras';
+        }
+    }
+    if (gertrudeMech === 'Interpose') {
+        gertrude.y = rapier.y;
+        gertrude.x = Math.floor((rapier.x + polonius.x) / 2);
+    }
+    if (gertrudeMech === 'Repel') {
+        rapier.x = Math.max(0, rapier.x - 3);
+        if (rapierAttached) hamlet.x = rapier.x - 1;
+    }
+    if (gertrudeMech === 'Disarm') {
+        if (rapier.y >= 12) rapier.y -= 2;
+        else rapier.y += 2;
+        rapierAttached = false;
+    }
 
-    if (mechanicToApply) {
-        const bodies = Composite.allBodies(engine.world);
-        const dagger = bodies.find(b => b.label === 'dagger');
-        const crown = bodies.find(b => b.label === 'crown');
-        const lodestones = bodies.filter(b => b.label === 'lodestone');
-        
-        if (mechanicToApply === 'Suspend' && dagger) Matter.Body.setStatic(dagger, true);
-        if (mechanicToApply === 'Invert') {
-            engine.world.gravity.x *= -1;
-            engine.world.gravity.y *= -1;
-        }
-        if (mechanicToApply === 'Swap' && dagger && crown) {
-            const daggerPos = { x: dagger.position.x, y: dagger.position.y };
-            const crownPos = { x: crown.position.x, y: crown.position.y };
-            Matter.Body.setPosition(dagger, crownPos);
-            Matter.Body.setPosition(crown, daggerPos);
-            Matter.Body.setVelocity(dagger, { x: 0, y: 0 });
-            Matter.Body.setVelocity(crown, { x: 0, y: 0 });
-        }
-        if (mechanicToApply === 'Fracture') {
-            const glass = bodies.filter(b => b.label === 'glass');
-            Composite.remove(engine.world, glass);
-        }
-        if (mechanicToApply === 'Duplicate') {
-            const debris = bodies.filter(b => b.label === 'debris');
-            debris.forEach(d => {
-                const clone = Bodies.rectangle(d.position.x + 30, d.position.y - 30, 40, 40, { density: 0.05, label: 'debris' });
-                Composite.add(engine.world, clone);
-            });
-        }
-        if (mechanicToApply === 'AlterMass' && dagger) {
-            Matter.Body.setDensity(dagger, dagger.density * 5); // Make it heavy
+    // --- HAMLET ATTACKS ---
+    if (!rapierAttached && hamletMech !== 'Feint') {
+        // Can't attack without weapon
+        return { poloniusKilled };
+    }
+
+    if (hamletMech === 'Feint') {
+        if (!rapierAttached) {
+            // Move hamlet towards rapier
+            if (hamlet.y < rapier.y) hamlet.y = Math.min(hamlet.y + 2, rapier.y);
+            else if (hamlet.y > rapier.y) hamlet.y = Math.max(hamlet.y - 2, rapier.y);
+            hamlet.x = Math.min(hamlet.x + 1, rapier.x - 1);
+            if (hamlet.y === rapier.y && hamlet.x === rapier.x - 1) rapierAttached = true;
+        } else {
+            // Move both towards polonius Y
+            if (rapier.y < polonius.y) { rapier.y = Math.min(rapier.y + 2, polonius.y); hamlet.y = rapier.y; }
+            else if (rapier.y > polonius.y) { rapier.y = Math.max(rapier.y - 2, polonius.y); hamlet.y = rapier.y; }
+            rapier.x++; hamlet.x++;
         }
     }
 
-    let minDistance = Infinity;
+    if (rapierAttached) {
+        if (hamletMech === 'Fracture') {
+            // Destroy adjacent arras/furniture
+            const adj = state.findIndex(e => (e.type === 'arras' || e.type === 'furniture') && e.x === rapier.x + 1 && e.y === rapier.y);
+            if (adj !== -1) state.splice(adj, 1);
+            rapier.x++; hamlet.x++;
+        }
 
-    // Run for 300 ticks (5 seconds at 60fps) to match a 1-turn duration
-    for (let i = 0; i < 300; i++) {
-        const bodies = Composite.allBodies(engine.world);
-        const daggers = bodies.filter(b => b.label === 'dagger');
-        const lodestones = bodies.filter(b => b.label === 'lodestone');
-        const crown = bodies.find(b => b.label === 'crown');
-        
-        if (mechanicToApply === 'Magnetize' || mechanicToApply === 'Repel') {
-            daggers.forEach(dagger => {
-                if (lodestones.length > 0) {
-                    lodestones.forEach(stone => {
-                        const forceMagnitude = 0.005 * dagger.mass;
-                        const dx = stone.position.x - dagger.position.x;
-                        const dy = stone.position.y - dagger.position.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
-                        // Avoid division by zero
-                        if (dist > 0.1) {
-                            const force = { 
-                                x: (mechanicToApply === 'Magnetize' ? 1 : -1) * (dx / dist) * forceMagnitude, 
-                                y: (mechanicToApply === 'Magnetize' ? 1 : -1) * (dy / dist) * forceMagnitude 
-                            };
-                            Matter.Body.applyForce(dagger, dagger.position, force);
-                        }
-                    });
+        let moveDistance = 0;
+        let pierceFurniture = false;
+        if (hamletMech === 'Lunge') moveDistance = 3;
+        if (hamletMech === 'Pierce') { moveDistance = 2; pierceFurniture = true; }
+
+        if (moveDistance > 0) {
+            for (let step = 0; step < moveDistance; step++) {
+                rapier.x++; hamlet.x++;
+                const hit = state.find(e => e !== rapier && e !== hamlet && e.x === rapier.x && e.y === rapier.y);
+                if (hit) {
+                    if (hit.type === 'polonius') {
+                        poloniusKilled = true;
+                        break;
+                    } else if (hit.type === 'arras' || hit.type === 'gertrude') {
+                        rapier.x--; hamlet.x--; 
+                        break;
+                    } else if (hit.type === 'furniture' && !pierceFurniture) {
+                        rapier.x--; hamlet.x--;
+                        break;
+                    }
                 }
-            });
+            }
         }
+    }
 
-        Engine.update(engine, 1000 / 60);
-        
-        // Track minimum distance
-        if (crown && daggers.length > 0) {
-            daggers.forEach(d => {
-                const dx = d.position.x - crown.position.x;
-                const dy = d.position.y - crown.position.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                if (dist < minDistance) {
-                    minDistance = dist;
-                }
-            });
-        }
+    return { poloniusKilled };
+}
 
-        if (collisionOccurred) break;
+function greedyHamlet(state) {
+    const rapier = getEntity(state, 'rapier');
+    const polonius = getEntity(state, 'polonius');
+    const hamlet = getEntity(state, 'hamlet');
+    
+    let rapierAttached = (hamlet.y === rapier.y && hamlet.x === rapier.x - 1);
+    if (!rapierAttached) return 'Feint';
+    
+    let blockedBy = null;
+    for (let x = rapier.x + 1; x <= polonius.x; x++) {
+        const hit = state.find(e => e.x === x && e.y === rapier.y);
+        if (hit) { blockedBy = hit.type; break; }
     }
     
-    return { survived: !collisionOccurred, minDistance };
+    if (!blockedBy || blockedBy === 'polonius') return 'Lunge';
+    if (blockedBy === 'furniture') return 'Pierce';
+    if (blockedBy === 'arras') return 'Fracture';
+    if (blockedBy === 'gertrude') return 'Feint';
+    return 'Lunge';
 }
 
-function getOverlapPenalty(config) {
-    const engine = Engine.create();
-    buildWorld(engine, config);
-    const bodies = Composite.allBodies(engine.world);
-    let penalty = 0;
-    for (let i = 0; i < bodies.length; i++) {
-        for (let j = i + 1; j < bodies.length; j++) {
-            const bodyA = bodies[i];
-            const bodyB = bodies[j];
-            if (['ground', 'ceiling', 'wall'].includes(bodyA.label) || 
-                ['ground', 'ceiling', 'wall'].includes(bodyB.label)) {
-                continue;
-            }
-            if (Matter.Bounds.overlaps(bodyA.bounds, bodyB.bounds)) {
-                penalty += 100; // Heavy penalty for spawning on top of each other
-            }
-        }
+function greedyGertrude(state) {
+    const rapier = getEntity(state, 'rapier');
+    const polonius = getEntity(state, 'polonius');
+    
+    if (Math.abs(polonius.x - rapier.x) <= 5 && rapier.y === polonius.y) return 'Interpose';
+    if (Math.abs(polonius.x - rapier.x) <= 3) return 'Repel';
+    if (Math.random() > 0.5) return 'Solidify';
+    return 'Disarm';
+}
+
+function simulateMatch(config, useGertrude = true) {
+    let state = JSON.parse(JSON.stringify(config.entities));
+    for (let turn = 0; turn < 9; turn++) {
+        const hMech = greedyHamlet(state);
+        const gMech = useGertrude ? greedyGertrude(state) : null;
+        const result = simulateTurn(state, hMech, gMech);
+        if (result.poloniusKilled) return { hamletWins: true, turns: turn + 1 };
     }
-    return penalty;
+    return { hamletWins: false, turns: 9 };
 }
-
-const testMechanics = ['Suspend', 'Invert', 'Swap', 'Fracture', 'Duplicate', 'Magnetize', 'Repel', 'AlterMass'];
 
 function evaluateFitness(config) {
-    const overlapPenalty = getOverlapPenalty(config);
+    // Test if Hamlet can win against a dummy
+    const dummyMatch = simulateMatch(config, false);
+    if (!dummyMatch.hamletWins) return { fitness: 0, solutions: [] };
+
+    // Test if Hamlet can win against greedy Gertrude
+    let hamletWinsCounter = 0;
+    let totalMatches = 5; // Sim a few matches due to randomness in Solidify/Disarm logic
     
-    const baseline = simulate(config, null);
-    
-    // If it survives without any mechanic, it's trivial (0 fitness)
-    if (baseline.survived) {
-        return { fitness: 0, solutions: [] };
+    for (let i = 0; i < totalMatches; i++) {
+        const match = simulateMatch(config, true);
+        if (match.hamletWins) hamletWinsCounter++;
     }
+
+    const winRate = hamletWinsCounter / totalMatches;
+    let balanceMultiplier = 0;
+    if (winRate > 0.1 && winRate < 0.9) balanceMultiplier = 2.0; 
+    else if (winRate > 0) balanceMultiplier = 1.0; 
+
+    const baseScore = 1000 - (dummyMatch.turns * 50); // Faster dummy win = better path
+    let fitness = baseScore * balanceMultiplier;
     
-    let solutions = [];
-    let totalDistanceScore = 0;
-    
-    for (const mech of testMechanics) {
-        const result = simulate(config, mech);
-        if (result.survived) {
-            solutions.push(mech);
-            totalDistanceScore += result.minDistance;
-        }
-    }
-    
-    const numSolutions = solutions.length;
-    
-    // Goldilocks multiplier
-    let goldilocksMultiplier = 1;
-    if (numSolutions === 0) {
-        return { fitness: 0, solutions: [] };
-    } else if (numSolutions === 1) {
-        goldilocksMultiplier = 1;
-    } else if (numSolutions >= 2 && numSolutions <= 4) {
-        goldilocksMultiplier = 2; // Optimal sweet spot
-    } else if (numSolutions > 4) {
-        // Penalize overly open levels
-        goldilocksMultiplier = Math.max(0.1, 1 - (numSolutions - 4) * 0.2); 
-    }
-    
-    // Base score + distance gradient
-    const baseScore = numSolutions * 10;
-    // Cap average distance bonus so it doesn't vastly overpower base score
-    const avgDistance = numSolutions > 0 ? (totalDistanceScore / numSolutions) : 0;
-    const distanceBonus = Math.min(50, avgDistance * 0.05); 
-    
-    let fitness = (baseScore + distanceBonus) * goldilocksMultiplier;
-    fitness -= overlapPenalty;
-    
-    return { fitness: Math.max(0, fitness), solutions };
+    return { fitness: Math.max(0, fitness), solutions: ['Lunge', 'Feint', 'Pierce', 'Fracture'] };
 }
 
 if (!isMainThread && parentPort) {
@@ -212,4 +174,4 @@ if (!isMainThread && parentPort) {
     });
 }
 
-module.exports = { simulate, evaluateFitness, testMechanics };
+module.exports = { simulateTurn, evaluateFitness, testMechanics: [...hamletMechanics, ...gertrudeMechanics] };

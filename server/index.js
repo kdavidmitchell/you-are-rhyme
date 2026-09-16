@@ -1,52 +1,98 @@
 const express = require('express');
 const cors = require('cors');
+const http = require('http');
+const { Server } = require('socket.io');
 const { logEvent } = require('./db');
 const { evaluateVocalInput } = require('./dsl-compiler');
+const { simulateTurn } = require('./bot-tester');
 const { generateLevel } = require('./level-generator');
 const { db } = require('./db');
 
 const app = express();
 app.use(cors());
-// Parse raw audio bytes
 app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.json());
 
-// Fetch a playable level from the bot-tester DB, or generate a new one if none found
-app.get('/api/level', (req, res) => {
-    db.get('SELECT config, par, solution FROM levels ORDER BY RANDOM() LIMIT 1', (err, row) => {
-        if (err || !row) {
-            // Fallback to random generation if DB is empty
-            const fallback = generateLevel();
-            fallback.par = 3;
-            fallback.solution = 'Suspend'; // placeholder
-            return res.json(fallback);
-        }
-        const config = JSON.parse(row.config);
-        config.par = row.par;
-        
-        let solutions = [];
-        try {
-            solutions = JSON.parse(row.solution);
-        } catch(e) {
-            solutions = [row.solution];
-        }
-        
-        if (Array.isArray(solutions) && solutions.length > 0) {
-            // Pick a random valid solution to act as the cue for the player
-            config.solution = solutions[Math.floor(Math.random() * solutions.length)];
-        } else {
-            config.solution = row.solution;
-        }
-        
-        res.json(config);
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: "*", methods: ["GET", "POST"] }
+});
+
+const scriptLines = [
+    { speaker: 'QUEEN', text: 'Come, come, you answer with an idle tongue.' },
+    { speaker: 'HAMLET', text: 'Go, go, you question with a wicked tongue.' },
+    { speaker: 'QUEEN', text: 'Why, how now, Hamlet?' },
+    { speaker: 'HAMLET', text: 'What’s the matter now?' },
+    { speaker: 'QUEEN', text: 'Have you forgot me?' },
+    { speaker: 'HAMLET', text: 'No, by the rood, not so. You are the Queen, your husband’s brother’s wife, And (would it were not so) you are my mother.' },
+    { speaker: 'QUEEN', text: 'Nay, then I’ll set those to you that can speak.' },
+    { speaker: 'HAMLET', text: 'Come, come, and sit you down; you shall not budge. You go not till I set you up a glass Where you may see the inmost part of you.' },
+    { speaker: 'QUEEN', text: 'What wilt thou do? Thou wilt not murder me? Help, ho!' },
+    { speaker: 'POLONIUS', text: 'What ho! Help!' },
+    { speaker: 'HAMLET', text: 'How now, a rat? Dead for a ducat, dead.' },
+    { speaker: 'POLONIUS', text: 'O, I am slain!' },
+    { speaker: 'QUEEN', text: 'O me, what hast thou done?' },
+    { speaker: 'HAMLET', text: 'Nay, I know not. Is it the King?' },
+    { speaker: 'QUEEN', text: 'O, what a rash and bloody deed is this!' },
+    { speaker: 'HAMLET', text: 'A bloody deed—almost as bad, good mother, As kill a king and marry with his brother.' },
+    { speaker: 'QUEEN', text: 'As kill a king?' },
+    { speaker: 'HAMLET', text: 'Ay, lady, it was my word.' }
+];
+
+let currentLineIndex = 0;
+let currentLevel = generateLevel();
+currentLevel.par = 18;
+
+function broadcastState() {
+    io.emit('state-update', {
+        currentIndex: currentLineIndex,
+        currentLine: scriptLines[currentLineIndex] || null,
+        totalLines: scriptLines.length,
+        isFinished: currentLineIndex >= scriptLines.length,
+        level: currentLevel
+    });
+}
+
+// Client connects
+io.on('connection', (socket) => {
+    console.log(`Client connected: ${socket.id}`);
+    
+    // Send immediate state
+    socket.emit('state-update', {
+        currentIndex: currentLineIndex,
+        currentLine: scriptLines[currentLineIndex] || null,
+        totalLines: scriptLines.length,
+        isFinished: currentLineIndex >= scriptLines.length,
+        level: currentLevel
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`Client disconnected: ${socket.id}`);
     });
 });
 
-// Process a turn
+// Reset scene
+app.post('/api/reset', (req, res) => {
+    currentLineIndex = 0;
+    currentLevel = generateLevel();
+    currentLevel.par = 18;
+    broadcastState();
+    res.json({ success: true });
+});
+
+// Process a turn (can still be REST, but we broadcast the result via Socket.io)
 app.post('/api/turn', async (req, res) => {
+    if (currentLineIndex >= scriptLines.length) {
+        return res.status(400).json({ error: 'Scene is over.' });
+    }
+
     const audioBytes = req.body;
-    const { pauseDuration, wpmDelta } = req.query; // Passed from frontend metadata
+    const { wpmDelta } = req.query;
     
+    const currentLine = scriptLines[currentLineIndex];
+    const playerRole = currentLine.speaker;
+    const expectedText = currentLine.text;
+
     try {
         // 1. Transcribe via Python HTTP service
         const pyRes = await fetch('http://localhost:5000/transcribe', {
@@ -56,47 +102,52 @@ app.post('/api/turn', async (req, res) => {
         const pyData = await pyRes.json();
         const text = pyData.text;
         const actualPauseDuration = pyData.pauseDuration || 0;
+        const volume = pyData.volume || 0.0;
         
-        console.log(`[Turn] Heard: ${text} | Pauses: ${actualPauseDuration.toFixed(2)}s`);
+        console.log(`[Turn] ${playerRole} Heard: ${text} | Pauses: ${actualPauseDuration.toFixed(2)}s | Vol: ${volume.toFixed(4)}`);
 
-        // 2. Score via Ollama
+        // 2. Scores
         let scores = { semanticScore: 0, volatilityScore: 0, desireScore: 0, disgustScore: 0, burdenScore: 0 };
-        if (text) {
-            const prompt = `Evaluate the following text for a live theatre performance. Provide the following scores (0.0 to 1.0):
-- 'semanticScore': themes of trading places, reversed perspectives, or paradoxical role-swapping.
-- 'volatilityScore': emotional weight, anger, or volatility.
-- 'desireScore': themes of love, desire, fate, or pulling together.
-- 'disgustScore': themes of disgust, rejection, or banishment.
-- 'burdenScore': themes of heavy burden, weight, or immense lightness (0 = lightness, 1 = heavy burden).
-
-Respond ONLY with a valid JSON object containing exactly these five keys.
-
-Text: "${text}"`;
-
-            try {
-                const ollamaRes = await fetch('http://localhost:11434/api/generate', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: 'llama3', prompt, stream: false, format: 'json' })
-                });
-                const ollamaData = await ollamaRes.json();
-                scores = JSON.parse(ollamaData.response);
-            } catch (err) {
-                console.warn(`[Warning] Ollama semantic evaluation failed (is Ollama running?). Proceeding with default scores.`);
-            }
-        }
 
         // 3. Compile DSL (Dominant Force)
         const commands = evaluateVocalInput(
+            playerRole,
+            expectedText,
             text, 
             scores, 
             actualPauseDuration, 
-            parseFloat(wpmDelta || 0)
+            parseFloat(wpmDelta || 0),
+            volume
         );
 
-        logEvent('session_turn', 'turn_processed', { text, scores, commands });
+        logEvent('session_turn', 'turn_processed', { role: playerRole, expectedText, text, commands });
 
-        res.json({ text, scores, commands });
+        // Apply commands to server state
+        commands.forEach(cmd => {
+            const hMech = playerRole === 'HAMLET' ? cmd.action : null;
+            const gMech = playerRole === 'QUEEN' ? cmd.action : null;
+            simulateTurn(currentLevel.entities, hMech, gMech);
+        });
+
+        // Advance line
+        currentLineIndex++;
+        
+        // Auto-advance past Polonius lines
+        while (currentLineIndex < scriptLines.length && scriptLines[currentLineIndex].speaker === 'POLONIUS') {
+            currentLineIndex++;
+        }
+
+        // Broadcast to ALL connected clients so both players see the physics happen at the same time
+        io.emit('turn-result', {
+            text: text,
+            commands: commands,
+            nextLineIndex: currentLineIndex
+        });
+
+        broadcastState();
+
+        // Send standard response to the client that initiated the request
+        res.json({ success: true });
 
     } catch (err) {
         console.error('Turn processing error:', err.message);
@@ -104,7 +155,54 @@ Text: "${text}"`;
     }
 });
 
+// Trigger a CPU turn
+app.post('/api/cpu-turn', (req, res) => {
+    if (currentLineIndex >= scriptLines.length) {
+        return res.status(400).json({ error: 'Scene is over.' });
+    }
+
+    const currentLine = scriptLines[currentLineIndex];
+    const playerRole = currentLine.speaker;
+    const expectedText = currentLine.text;
+
+    // Simulate realistic acoustic parameters for the CPU
+    const text = expectedText; // 0 Deviation (CPU has perfect memory)
+    const actualPauseDuration = Math.random() * 1.5; // Random pauses up to 1.5s
+    const volume = 0.02 + (Math.random() * 0.06); // Moderate volume
+    const wpmDelta = (Math.random() * 60) - 30; // Minor pacing shifts
+
+    let scores = { semanticScore: 0, volatilityScore: 0, desireScore: 0, disgustScore: 0, burdenScore: 0 };
+    
+    const commands = evaluateVocalInput(
+        playerRole, expectedText, text, scores, actualPauseDuration, wpmDelta, volume
+    );
+
+    logEvent('session_turn', 'cpu_turn_processed', { role: playerRole, commands });
+
+    // Apply commands to server state
+    commands.forEach(cmd => {
+        const hMech = playerRole === 'HAMLET' ? cmd.action : null;
+        const gMech = playerRole === 'QUEEN' ? cmd.action : null;
+        simulateTurn(currentLevel.entities, hMech, gMech);
+    });
+
+    currentLineIndex++;
+    while (currentLineIndex < scriptLines.length && scriptLines[currentLineIndex].speaker === 'POLONIUS') {
+        currentLineIndex++;
+    }
+
+    io.emit('turn-result', {
+        text: `[CPU AI]: ${text}`,
+        commands: commands,
+        nextLineIndex: currentLineIndex
+    });
+
+    broadcastState();
+
+    res.json({ success: true });
+});
+
 const PORT = 3001;
-app.listen(PORT, () => {
-    console.log(`Turn-Based Backend Orchestrator running on port ${PORT}`);
+server.listen(PORT, () => {
+    console.log(`Networked Backend Orchestrator running on port ${PORT}`);
 });
