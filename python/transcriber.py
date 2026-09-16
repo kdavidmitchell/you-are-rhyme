@@ -57,8 +57,17 @@ def transcribe():
     word_logs = [f"{w.word}({w.start:.2f}-{w.end:.2f})" for w in all_words]
     logging.info(f"Word timestamps: {', '.join(word_logs)}")
     
-    logging.info(f"Transcribed turn: {text} (Pauses: {pause_duration}s)")
-    return jsonify({"text": text, "pauseDuration": pause_duration})
+    # Calculate RMS Volume
+    rms_volume = 0.0
+    if len(audio_array) > 0:
+        rms_volume = float(np.sqrt(np.mean(audio_array**2)))
+    
+    logging.info(f"Transcribed turn: {text} (Pauses: {pause_duration}s, Volume: {rms_volume:.4f})")
+    return jsonify({
+        "text": text, 
+        "pauseDuration": pause_duration,
+        "volume": rms_volume
+    })
 
 if __name__ == "__main__":
     app.run(port=5000, debug=False)

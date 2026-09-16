@@ -1,21 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
+import { io } from 'socket.io-client'
 import GameEngine from './GameEngine'
 import './App.css'
 
-const STAGE_DIRECTIONS = {
-  'Suspend': 'Pause heavily mid-sentence.',
-  'Invert': 'Speak quickly in a sudden rush.',
-  'Swap': 'Speak of trading places and reversed perspectives.',
-  'Fracture': 'Speak with sudden anger.',
-  'Duplicate': 'Repeat your words and double your meaning.',
-  'Magnetize': 'Speak of desire and pulling things together.',
-  'Repel': 'Speak of disgust and casting things away.',
-  'AlterMass': 'Speak of immense burdens and heavy weight.'
-};
-
 function App() {
+  const [role, setRole] = useState(null) // null (selection), 'HAMLET', 'QUEEN', 'SPECTATOR'
   const [levelConfig, setLevelConfig] = useState(null)
-  const [turn, setTurn] = useState(1)
+  const [scriptState, setScriptState] = useState(null)
   const [status, setStatus] = useState('IDLE')
   
   const [dslCommands, setDslCommands] = useState([])
@@ -25,13 +16,49 @@ function App() {
   const mediaRecorderRef = useRef(null)
   const audioChunks = useRef([])
   const recordingStartTime = useRef(0)
+  const socketRef = useRef(null)
+
+  const [autoPlayCPU, setAutoPlayCPU] = useState(false)
 
   useEffect(() => {
-    fetch('http://localhost:3001/api/level')
-      .then(res => res.json())
-      .then(data => setLevelConfig(data))
-      .catch(err => console.error("Failed to load level:", err));
+    socketRef.current = io('http://localhost:3001');
+
+    socketRef.current.on('state-update', (data) => {
+      setScriptState(data);
+      setLevelConfig(prev => (prev?.id === data.level.id ? prev : data.level));
+    });
+
+    socketRef.current.on('turn-result', (data) => {
+      setTranscript(data.text);
+      setDslCommands(data.commands);
+      
+      if (data.commands && data.commands.length > 0) {
+        setCommandToast(data.commands[0]);
+        setTimeout(() => setCommandToast(null), 2500);
+      }
+      
+      setStatus('SIMULATING');
+    });
+
+    return () => {
+      socketRef.current.disconnect();
+    }
   }, [])
+
+  // CPU Opponent Logic
+  useEffect(() => {
+    if (autoPlayCPU && status === 'IDLE' && role && role !== 'SPECTATOR') {
+      const isMyTurn = scriptState?.currentLine?.speaker === role;
+      if (!isMyTurn && scriptState?.currentLine) {
+        // Wait 2.5 seconds before the CPU "speaks" its line
+        const timer = setTimeout(() => {
+          fetch('http://localhost:3001/api/cpu-turn', { method: 'POST' })
+            .catch(err => console.error("CPU Turn failed", err));
+        }, 2500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [scriptState, autoPlayCPU, status, role]);
 
   const startTurn = async () => {
     try {
@@ -85,26 +112,18 @@ function App() {
       offset += chunk.length;
     }
 
+    const estimatedWpmDelta = 100 / turnDuration;
+
     try {
-      const res = await fetch(`http://localhost:3001/api/turn?pauseDuration=0.5&wpmDelta=${100/turnDuration}`, {
+      // Send audio to server, which will broadcast the turn-result via websocket
+      await fetch(`http://localhost:3001/api/turn?wpmDelta=${estimatedWpmDelta}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/octet-stream'
         },
         body: combined
       });
-      
-      const data = await res.json();
-      setTranscript(data.text);
-      setDslCommands(data.commands);
-      
-      if (data.commands && data.commands.length > 0) {
-        setCommandToast(data.commands[0]);
-        setTimeout(() => setCommandToast(null), 2500);
-      }
-      
-      setStatus('SIMULATING');
-      
+      // Do not set status here, rely on 'turn-result' socket event so all clients sync
     } catch (err) {
       console.error("Turn evaluation failed", err);
       setStatus('IDLE');
@@ -112,83 +131,116 @@ function App() {
   }
 
   const handleTurnEnd = () => {
-    const maxTurns = levelConfig?.par || 1;
-    setTurn(t => t + 1);
+    // Rely on socket for state sync. Just clear local visual state.
     setDslCommands([]);
     
-    if (turn >= maxTurns) {
-      alert(`[ SYSTEM MSG ]: SCENE SURVIVED. LOADING NEXT UNIVERSE...`);
-      setTurn(1);
-      fetch('http://localhost:3001/api/level').then(r=>r.json()).then(d=>setLevelConfig(d));
+    if (scriptState && scriptState.currentIndex >= scriptState.totalLines - 1) {
+      // Only the active player triggers the reset to avoid race conditions
+      if (role === 'QUEEN' || role === 'HAMLET') {
+        alert(`[ SYSTEM MSG ]: SCENE SURVIVED. GERTRUDE WINS. LOADING NEXT UNIVERSE...`);
+        fetch('http://localhost:3001/api/reset', { method: 'POST' });
+      }
     }
     setStatus('IDLE');
   }
 
-  const handleTragedy = () => {
-    alert("[ SYSTEM MSG ]: TRAGEDY DETECTED. UNIVERSE RESETTING...");
-    setTurn(1);
+  const handleHamletWin = () => {
+    if (role === 'QUEEN' || role === 'HAMLET') {
+      alert("[ SYSTEM MSG ]: POLONIUS SLAIN. HAMLET WINS. UNIVERSE RESETTING...");
+      fetch('http://localhost:3001/api/reset', { method: 'POST' });
+    }
+    setDslCommands([]);
     setStatus('IDLE');
-    fetch('http://localhost:3001/api/level').then(r=>r.json()).then(d=>setLevelConfig(d));
   }
 
-  const getGravityDesc = () => {
-    if (!levelConfig) return 'ANALYZING...';
-    const gx = levelConfig.gravityX || 0;
-    const gy = levelConfig.gravityY !== undefined ? levelConfig.gravityY : 1;
-    const magnitude = Math.sqrt(gx*gx + gy*gy).toFixed(2);
-    
-    let direction = "";
-    const angle = Math.atan2(gy, gx) * (180 / Math.PI);
-    
-    if (angle > -22.5 && angle <= 22.5) direction = "EAST";
-    else if (angle > 22.5 && angle <= 67.5) direction = "SOUTH-EAST";
-    else if (angle > 67.5 && angle <= 112.5) direction = "SOUTH";
-    else if (angle > 112.5 && angle <= 157.5) direction = "SOUTH-WEST";
-    else if (angle > 157.5 || angle <= -157.5) direction = "WEST";
-    else if (angle > -157.5 && angle <= -112.5) direction = "NORTH-WEST";
-    else if (angle > -112.5 && angle <= -67.5) direction = "NORTH";
-    else if (angle > -67.5 && angle <= -22.5) direction = "NORTH-EAST";
-
-    return `G-FORCE: ${magnitude} | VECTOR: ${direction} (${angle.toFixed(0)}°)`;
+  // --- Role Selection Screen ---
+  if (!role) {
+    return (
+      <div className="App selection-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: '20px' }}>
+        <header className="app-header">
+          <h1>you are rhyme</h1>
+        </header>
+        <p>Select your role for this performance:</p>
+        <button className="action-btn" onClick={() => setRole('HAMLET')} style={{ width: '200px', backgroundColor: '#2563eb', color: 'white', border: 'none' }}>Join as Hamlet</button>
+        <button className="action-btn" onClick={() => setRole('QUEEN')} style={{ width: '200px', backgroundColor: '#9333ea', color: 'white', border: 'none' }}>Join as Gertrude</button>
+        <button className="action-btn" onClick={() => setRole('SPECTATOR')} style={{ width: '200px', backgroundColor: '#4b5563', color: 'white', border: 'none' }}>Spectator Mode</button>
+      </div>
+    );
   }
+
+  const isMyTurn = scriptState?.currentLine?.speaker === role;
 
   return (
     <div className="App">
       <header className="app-header">
         <h1>you are rhyme</h1>
-        <p className="project-desc">
-          In 2014, Simon Palfrey wrote "Shakespeare's Possible Worlds", where he talks about formactions, derived from Leibniz's monads...
-        </p>
+        <div className="project-desc" style={{ marginTop: '20px' }}>
+          <strong>Hamlet Act 3, Scene 4. A Voice-Activated Theatrical Duel.</strong>
+          <p style={{ marginTop: '10px', fontSize: '14px', lineHeight: '1.4' }}>
+            Portray your character through vocal performance to influence the physical stage. 
+            Speak with volume, pause for dramatic effect, and faithfully deliver your lines. 
+            Deviations and acoustic intensity will trigger asymmetrical physical forces. 
+            Hamlet must pierce the Arras to slay Polonius; Gertrude must solidify her defenses to save him.
+          </p>
+        </div>
       </header>
 
       <div className="main-layout">
-        {/* Left Column */}
+        {/* Left Column (Teleprompter) */}
         <aside className="side-panel left-panel">
-          <h2>Stage Direction</h2>
-          <p className="instruction">
-            Improvise your monologue. You must embody the following direction to avert the tragedy:
-          </p>
-          <div className="director-note">
-            {levelConfig ? STAGE_DIRECTIONS[levelConfig.solution] || 'Waiting for cue...' : 'Loading Universe...'}
+          <h2>The Script</h2>
+          <div className="teleprompter">
+            {scriptState && scriptState.currentLine ? (
+              <div className="script-line active-line">
+                <span className="speaker-tag">{scriptState.currentLine.speaker}:</span>
+                <p className="script-text">"{scriptState.currentLine.text}"</p>
+              </div>
+            ) : (
+              <p>Scene Complete.</p>
+            )}
           </div>
           
           <div className="controls">
-            {status === 'IDLE' && (
-              <button className="action-btn" onClick={startTurn}>Start Turn (Speak)</button>
+            {role !== 'SPECTATOR' && (
+              <>
+                <div style={{ marginBottom: '15px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', cursor: 'pointer' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={autoPlayCPU} 
+                      onChange={(e) => setAutoPlayCPU(e.target.checked)} 
+                    />
+                    Enable CPU Opponent
+                  </label>
+                </div>
+                {status === 'IDLE' && isMyTurn && (
+                  <button className="action-btn" onClick={startTurn}>Speak Line (Your Turn)</button>
+                )}
+                {status === 'IDLE' && !isMyTurn && (
+                  <button className="action-btn disabled" disabled>Waiting for {scriptState?.currentLine?.speaker}...</button>
+                )}
+                {status === 'RECORDING' && isMyTurn && (
+                  <button className="action-btn recording" onClick={stopTurnAndEvaluate}>Stop & Execute</button>
+                )}
+                {status === 'EVALUATING' && (
+                  <button className="action-btn disabled" disabled>Evaluating...</button>
+                )}
+                {status === 'SIMULATING' && (
+                  <button className="action-btn disabled" disabled>Simulating...</button>
+                )}
+              </>
             )}
-            {status === 'RECORDING' && (
-              <button className="action-btn recording" onClick={stopTurnAndEvaluate}>Stop & Execute</button>
+            {role === 'SPECTATOR' && (
+              <p>You are observing the duel.</p>
             )}
-            {status === 'EVALUATING' && (
-              <button className="action-btn disabled" disabled>Evaluating...</button>
-            )}
-            {status === 'SIMULATING' && (
-              <button className="action-btn disabled" disabled>Simulating...</button>
-            )}
+          </div>
+
+          <div className="transcript-feedback">
+            <strong>Heard:</strong> {transcript || (status === 'RECORDING' ? 'Listening...' : '')}
           </div>
         </aside>
 
-        {/* Center Column */}
+        {/* Center Column (Stage) */}
         <main className="game-panel">
           <div className="game-wrapper">
             <GameEngine 
@@ -196,45 +248,41 @@ function App() {
               commands={dslCommands} 
               simulationPhase={status === 'SIMULATING'} 
               onTurnEnd={handleTurnEnd} 
-              onTragedy={handleTragedy}
+              onHamletWin={handleHamletWin}
             />
-            
             {commandToast && (
               <div className="command-toast animate-toast">
                 ⚡ Action Executed: {commandToast.action}
               </div>
             )}
-            
-            <div className="transcript-feedback">
-              <strong>Heard:</strong> {transcript || (status === 'RECORDING' ? 'Listening...' : '')}
-            </div>
           </div>
         </main>
 
-        {/* Right Column */}
+        {/* Right Column (Status) */}
         <aside className="side-panel right-panel">
           <h2>Status</h2>
           <div className="status-widget">
             <div className="status-item">
-              <strong>Turn</strong>
-              <span>{turn} of {levelConfig?.par || 1}</span>
+              <strong>Line</strong>
+              <span>{(scriptState?.currentIndex || 0) + 1} of {scriptState?.totalLines || 18}</span>
             </div>
             <div className="status-item">
-              <strong>Environment Scan</strong>
-              <span className="gravity-text">{getGravityDesc()}</span>
+              <strong>Current Turn</strong>
+              <span style={{color: scriptState?.currentLine?.speaker === 'HAMLET' ? '#2563eb' : '#9333ea', fontWeight: 'bold'}}>
+                {scriptState?.currentLine?.speaker || 'None'}
+              </span>
             </div>
           </div>
 
           <div className="legend-panel">
-            <h2>ASCII Legend</h2>
+            <h2>Cast & Props</h2>
             <ul className="legend-list">
-              <li><span className="legend-icon" style={{color: '#b8860b'}}>W</span> The Crown</li>
-              <li><span className="legend-icon" style={{color: '#dc2626'}}>V</span> The Dagger</li>
-              <li><span className="legend-icon" style={{color: '#78350f'}}>---</span> Obstacle</li>
-              <li><span className="legend-icon" style={{color: '#0ea5e9'}}>===</span> Glass</li>
-              <li><span className="legend-icon" style={{color: '#ea580c'}}>[]</span> Debris</li>
-              <li><span className="legend-icon" style={{color: '#0d9488'}}>(@)</span> Lodestone</li>
-              <li><span className="legend-icon" style={{color: '#000000'}}>###</span> Boundary</li>
+              <li><span className="legend-icon" style={{color: '#2563eb'}}>H</span> Hamlet</li>
+              <li><span className="legend-icon" style={{color: '#9333ea'}}>G</span> Gertrude</li>
+              <li><span className="legend-icon" style={{color: '#16a34a'}}>P</span> Polonius</li>
+              <li><span className="legend-icon" style={{color: '#4b5563'}}>|||</span> The Arras</li>
+              <li><span className="legend-icon" style={{color: '#dc2626'}}>=={'>'}</span> Rapier</li>
+              <li><span className="legend-icon" style={{color: '#b45309'}}>[]</span> Furniture</li>
             </ul>
           </div>
         </aside>

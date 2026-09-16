@@ -1,47 +1,72 @@
 // dsl-compiler.js
-// Maps evaluated scores to Matter.js DSL commands using Dominant Force
+// Maps evaluated scores and physical vocal metrics to Asymmetrical Matter.js DSL commands
 
-function calculateRepetitionScore(text) {
-    if (!text) return 0;
-    const words = text.toLowerCase().replace(/[^\w\s]/g, '').split(/\s+/);
-    let duplicates = 0;
-    for (let i = 0; i < words.length - 1; i++) {
-        if (words[i] === words[i+1]) duplicates++;
+function levenshtein(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) {
+        matrix[i] = [i];
     }
-    // E.g., 2 consecutive duplicate pairs gives a high score
-    return Math.min(duplicates / 2, 1.0);
+    for (let j = 0; j <= a.length; j++) {
+        matrix[0][j] = j;
+    }
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1, // substitution
+                    Math.min(
+                        matrix[i][j - 1] + 1, // insertion
+                        matrix[i - 1][j] + 1  // deletion
+                    )
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
 }
 
-function evaluateVocalInput(text, scores, pauseDuration, wpmDelta) {
-    const { 
-        semanticScore = 0, 
-        volatilityScore = 0, 
-        desireScore = 0, 
-        disgustScore = 0, 
-        burdenScore = 0 
-    } = scores;
+function calculateDeviation(expected, actual) {
+    if (!expected || !actual) return 1.0;
+    const exp = expected.toLowerCase().replace(/[^\w\s]/g, '');
+    const act = actual.toLowerCase().replace(/[^\w\s]/g, '');
+    const dist = levenshtein(exp, act);
+    const maxLen = Math.max(exp.length, act.length);
+    if (maxLen === 0) return 0;
+    return dist / maxLen; // 0.0 (perfect) to 1.0 (completely different)
+}
 
-    const repetitionScore = calculateRepetitionScore(text);
+function evaluateVocalInput(playerRole, expectedText, actualText, scores, pauseDuration, wpmDelta, volume) {
+    const deviationScore = calculateDeviation(expectedText, actualText);
 
-    // Normalize physical metrics to 0.0 - 1.0 scale for fair comparison
+    // Normalize metrics to 0.0 - 1.0 scale
     const normPause = Math.min(pauseDuration / 3.0, 1.0); // 3 seconds is max
-    const normWpm = Math.min(wpmDelta / 100.0, 1.0);      // 100 delta is max
+    const normWpm = Math.min(Math.abs(wpmDelta) / 100.0, 1.0); // 100 delta is max
+    const normVolume = Math.min(volume / 0.1, 1.0); // Typical normalized RMS is quite small, approx 0.05-0.1 for shouting
 
-    // Define mechanics, their normalized values, and thresholds
-    const mechanics = [
-        { name: 'Suspend', value: normPause, threshold: 0.4, command: { action: 'Suspend', target: 'dagger' } },
-        { name: 'Invert', value: normWpm, threshold: 0.4, command: { action: 'Invert', target: 'gravity' } },
-        { name: 'Swap', value: semanticScore, threshold: 0.4, command: { action: 'Swap', targetA: 'dagger', targetB: 'crown' } },
-        { name: 'Fracture', value: volatilityScore, threshold: 0.4, command: { action: 'Fracture', target: 'walls' } },
-        { name: 'Duplicate', value: repetitionScore, threshold: 0.4, command: { action: 'Duplicate', target: 'dagger' } },
-        { name: 'Magnetize', value: desireScore, threshold: 0.4, command: { action: 'Magnetize', targetA: 'dagger', targetB: 'crown' } },
-        { name: 'Repel', value: disgustScore, threshold: 0.4, command: { action: 'Repel', targetA: 'dagger', targetB: 'crown' } },
-        { name: 'AlterMass', value: burdenScore, threshold: 0.4, command: { action: 'AlterMass', target: 'dagger', multiplier: 5 } }
-    ];
+    // The "Dominant Force" paradigm - now asymmetrical
+    let mechanics = [];
+
+    if (playerRole === 'HAMLET') {
+        mechanics = [
+            { name: 'Lunge', value: normVolume, threshold: 0.3, command: { action: 'Lunge', target: 'rapier', magnitude: normVolume } },
+            { name: 'Fracture', value: deviationScore, threshold: 0.4, command: { action: 'Fracture', target: 'arras' } },
+            { name: 'Feint', value: normWpm, threshold: 0.3, command: { action: 'Feint', target: 'rapier', magnitude: normWpm } },
+            { name: 'Pierce', value: normPause, threshold: 0.3, command: { action: 'Pierce', target: 'rapier' } }
+        ];
+    } else if (playerRole === 'QUEEN') {
+        mechanics = [
+            { name: 'Solidify', value: normPause, threshold: 0.3, command: { action: 'Solidify', target: 'arras' } },
+            { name: 'Repel', value: normVolume, threshold: 0.3, command: { action: 'Repel', target: 'rapier', magnitude: normVolume } },
+            { name: 'Interpose', value: normWpm, threshold: 0.3, command: { action: 'Interpose', target: 'gertrude' } },
+            { name: 'Disarm', value: deviationScore, threshold: 0.4, command: { action: 'Disarm', target: 'rapier' } }
+        ];
+    }
 
     // Find the Dominant Force (highest margin above threshold)
     let dominantMechanic = null;
-    let maxMargin = 0; // Margin must be > 0 to trigger
+    let maxMargin = 0; 
 
     for (const mech of mechanics) {
         const margin = mech.value - mech.threshold;
@@ -51,9 +76,11 @@ function evaluateVocalInput(text, scores, pauseDuration, wpmDelta) {
         }
     }
 
+    // Return the dominant mechanic if one exists, otherwise empty
     return dominantMechanic ? [dominantMechanic] : [];
 }
 
 module.exports = {
-    evaluateVocalInput
+    evaluateVocalInput,
+    calculateDeviation
 };
