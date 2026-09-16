@@ -132,7 +132,7 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
             case 'polonius': return 'P';
             case 'arras': return '|||';
             case 'rapier': return '==>';
-            case 'furniture': return 'O';
+            case 'furniture': return '[]';
             case 'dead': return 'X';
             default: return '?';
         }

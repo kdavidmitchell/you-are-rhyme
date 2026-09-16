@@ -25,7 +25,7 @@ function App() {
 
     socketRef.current.on('state-update', (data) => {
       setScriptState(data);
-      setLevelConfig(prev => (prev?.id === data.level.id ? prev : data.level));
+      setLevelConfig(data.level);
     });
 
     socketRef.current.on('turn-result', (data) => {
@@ -235,8 +235,27 @@ function App() {
             )}
           </div>
 
-          <div className="transcript-feedback">
-            <strong>Heard:</strong> {transcript || (status === 'RECORDING' ? 'Listening...' : '')}
+          <div className="mechanics-guide" style={{marginTop: '2rem'}}>
+            <h2>Mechanics Guide</h2>
+            <ul className="legend-list">
+              {(role === 'HAMLET' || role === 'SPECTATOR') && (
+                <>
+                  <li><div><strong>Lunge</strong> (Loud Vol) <br/><small>Move +3 right</small></div></li>
+                  <li><div><strong>Feint</strong> (Fast Pacing) <br/><small>Move vertical & pick up</small></div></li>
+                  <li><div><strong>Pierce</strong> (Pauses) <br/><small>Move +2 right, ignore []</small></div></li>
+                  <li><div><strong>Fracture</strong> (Fumble Line) <br/><small>Destroy adjacent ||| or []</small></div></li>
+                </>
+              )}
+              {(role === 'QUEEN' || role === 'SPECTATOR') && (
+                <>
+                  {role === 'SPECTATOR' && <hr style={{margin: '10px 0', borderColor: '#e5e7eb'}}/>}
+                  <li><div><strong>Repel</strong> (Loud Vol) <br/><small>Push Rapier -3 left</small></div></li>
+                  <li><div><strong>Interpose</strong> (Fast Pacing) <br/><small>Block Rapier's path</small></div></li>
+                  <li><div><strong>Solidify</strong> (Pauses) <br/><small>Turn 1 [] into |||</small></div></li>
+                  <li><div><strong>Disarm</strong> (Fumble Line) <br/><small>Drop Rapier 2 tiles away</small></div></li>
+                </>
+              )}
+            </ul>
           </div>
         </aside>
 
@@ -255,6 +274,10 @@ function App() {
                 ⚡ Action Executed: {commandToast.action}
               </div>
             )}
+          </div>
+          
+          <div className="transcript-feedback center-transcript">
+            <strong>Heard:</strong> {transcript || (status === 'RECORDING' ? 'Listening...' : '')}
           </div>
         </main>
 
@@ -279,10 +302,10 @@ function App() {
             <ul className="legend-list">
               <li><span className="legend-icon" style={{color: '#2563eb'}}>H</span> Hamlet</li>
               <li><span className="legend-icon" style={{color: '#9333ea'}}>G</span> Gertrude</li>
-              <li><span className="legend-icon" style={{color: '#16a34a'}}>P</span> Polonius</li>
+              <li><span className="legend-icon" style={{color: '#dc2626'}}>P</span> Polonius</li>
               <li><span className="legend-icon" style={{color: '#4b5563'}}>|||</span> The Arras</li>
-              <li><span className="legend-icon" style={{color: '#dc2626'}}>=={'>'}</span> Rapier</li>
-              <li><span className="legend-icon" style={{color: '#b45309'}}>[]</span> Furniture</li>
+              <li><span className="legend-icon" style={{color: '#f59e0b'}}>==&gt;</span> Rapier</li>
+              <li><span className="legend-icon" style={{color: '#8b5cf6'}}>[]</span> Furniture</li>
             </ul>
           </div>
         </aside>
