@@ -1,28 +1,28 @@
 # you-are-rhyme
 
-> A voice-driven physics game where the emotional weight, pace, and semantics of your spoken words literally shape the world.
+> A voice-activated theatrical dueling engine where the emotional weight, pace, and semantics of your spoken words dictate a multi-turn tactical grid battle.
 
-**you are rhyme** is an experimental interactive experience that chains local AI into a 2D physics engine. By translating vocal performance (via Whisper) and sentiment analysis (via Ollama) into a custom Domain Specific Language (DSL), the game turns your real-world emotions into real-time game mechanics—all within levels procedurally generated and validated by genetic algorithms.
+**you are rhyme** is an experimental interactive experience that chains local AI into a 2D grid-based tactical engine. By translating vocal performance (via Whisper) and script accuracy (via Levenshtein distance) into a custom Domain Specific Language (DSL), the game turns your real-world delivery of Hamlet (Act 3, Scene 4) into real-time game mechanics—all within levels procedurally generated and validated by genetic algorithms.
 
 ## Architecture Overview
 
 The project is split into three main pillars:
 
 ### 1. The Client (`/client`)
-A modern frontend built with **React**, **Vite**, and **Matter.js**. 
-* **Audio Capture:** Records raw audio bytes during a player's "turn" and tracks metadata (like WPM).
-* **Game Engine:** Renders the procedurally generated levels and executes the physics commands returned by the server.
+A modern frontend built with **React** and **Vite**. 
+* **Audio Capture:** Records raw audio bytes during a player's "turn" and streams them to the server.
+* **Game Engine:** Renders the procedurally generated 20x15 grid stage and animates the discrete grid commands (e.g., Lunge +3) returned by the server.
 
 ### 2. The AI Translation Pipeline (`/server` & `/python`)
 The backend orchestrator (Node.js/Express) receives audio and passes it through an AI pipeline:
-* **Transcription & Pacing:** A Python microservice using `faster-whisper` transcribes the audio and calculates the "dramatic pause duration" between spoken words.
-* **Semantic Evaluation:** The text is sent to a local **Ollama** instance (running `llama3`), which scores the text from 0.0 to 1.0 across 5 themes: *Semantic (Role-swapping)*, *Volatility (Anger)*, *Desire*, *Disgust*, and *Burden*.
-* **The DSL Compiler:** Uses a "Dominant Force" pattern. It evaluates the physical pacing and LLM semantic scores, finds the metric with the highest threshold margin, and translates it into a physical Matter.js command (e.g., Anger shatters glass, Pauses freeze the dagger, Heaviness increases mass).
+* **Transcription & Pacing:** A Python microservice using Whisper transcribes the audio and calculates the "dramatic pause duration" and words-per-minute pacing.
+* **Semantic Evaluation:** The backend calculates the Levenshtein distance between the raw transcription and the expected script line to measure script deviation.
+* **The DSL Compiler:** Resolves the player's acoustic performance into 8 character-specific tactical commands (Lunge, Feint, Pierce, Fracture for Hamlet; Repel, Interpose, Solidify, Disarm for Gertrude).
 
 ### 3. Procedural Level Generation & Genetic Algorithms
 Levels are not hand-crafted. They are generated and rigorously tested offline:
-* **Level Generator:** Creates a JSON "genotype" (coordinates, gravity, dynamic debris, magnetic lodestones).
-* **Bot Tester:** A headless Matter.js worker thread that simulates the level against all 8 game mechanics. It uses a "Goldilocks" fitness function to ensure the level isn't trivial, but also isn't too open—rewarding levels that can be beaten in exactly 2-4 distinct ways.
+* **Level Generator:** Creates a JSON "genotype" mapping the grid coordinates for all stage elements (Arras boundaries, Furniture obstacles, and character starting positions).
+* **Bot Tester:** Evaluates fitness by simulating a 9-turn match between a Greedy Hamlet AI and a Greedy Gertrude AI. It ensures levels possess structural tension by seeking a defensive success rate of 20-30%—preventing unwinnable choke points.
 * **SQLite:** Validated levels are saved to `telemetry.sqlite` to be served to the frontend.
 
 ## Getting Started
@@ -30,7 +30,6 @@ Levels are not hand-crafted. They are generated and rigorously tested offline:
 ### Prerequisites
 * [Node.js](https://nodejs.org/) (v18+)
 * [Python 3.8+](https://www.python.org/)
-* [Ollama](https://ollama.com/) (with the `llama3` model pulled: `ollama run llama3`)
 
 ### Installation
 
@@ -64,4 +63,4 @@ Levels are not hand-crafted. They are generated and rigorously tested offline:
    *(Note: To procedurally generate new levels offline, run `cd server && node ga-runner.js`)*
 
 ## Telemetry & Logging
-All player turns—including raw transcriptions, LLM scores, and the resulting DSL commands—are logged to `telemetry.sqlite` to help fine-tune the Dominant Force compiler thresholds and analyze player behavior.
+All player turns—including raw transcriptions, acoustic metrics, and the resulting DSL commands—are logged to `telemetry.sqlite` to help fine-tune the DSL compiler thresholds.
