@@ -58,12 +58,26 @@ body {
   flex-wrap: wrap;
 }
 
+.center-transcript {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  margin-top: 1.5rem;
+  border: var(--border-width) solid var(--panel-border);
+  border-radius: var(--radius);
+  width: 100%;
+  max-width: 808px; /* 800px board + 8px borders */
+  box-sizing: border-box;
+}
+
 .side-panel {
+  position: relative;
   flex: 0 0 280px;
   background: var(--panel-bg);
   border: var(--border-width) solid var(--panel-border);
   border-radius: var(--radius);
-  padding: 1.5rem;
+  padding: 1.5rem 1.5rem 5rem 1.5rem;
   display: flex;
   flex-direction: column;
   backdrop-filter: var(--glass-blur);
@@ -210,6 +224,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
 .game-wrapper {
