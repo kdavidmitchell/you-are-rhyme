@@ -62,5 +62,8 @@ Levels are not hand-crafted. They are generated and rigorously tested offline:
    ```
    *(Note: To procedurally generate new levels offline, run `cd server && node ga-runner.js`)*
 
+5. **Play the Game:** 
+   Open your web browser and navigate to http://localhost:5173 to enter the stage!
+
 ## Telemetry & Logging
 All player turns—including raw transcriptions, acoustic metrics, and the resulting DSL commands—are logged to `telemetry.sqlite` to help fine-tune the DSL compiler thresholds.
