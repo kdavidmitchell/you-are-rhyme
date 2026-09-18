@@ -10,18 +10,18 @@ The project is split into three main pillars:
 
 ### 1. The Client (`/client`)
 A modern frontend built with **React** and **Vite**. 
-* **Audio Capture:** Records raw audio bytes during a player's "turn" and streams them to the server.
+* **Audio Capture:** Records raw audio bytes during a player's turn and streams them to the server.
 * **Game Engine:** Renders the procedurally generated 20x15 grid stage and animates the discrete grid commands (e.g., Lunge +3) returned by the server.
 
 ### 2. The AI Translation Pipeline (`/server` & `/python`)
 The backend orchestrator (Node.js/Express) receives audio and passes it through an AI pipeline:
-* **Transcription & Pacing:** A Python microservice using Whisper transcribes the audio and calculates the "dramatic pause duration" and words-per-minute pacing.
+* **Transcription & Pacing:** A Python microservice using Whisper transcribes the audio and calculates the dramatic pause duration and words-per-minute pacing.
 * **Semantic Evaluation:** The backend calculates the Levenshtein distance between the raw transcription and the expected script line to measure script deviation.
 * **The DSL Compiler:** Resolves the player's acoustic performance into 8 character-specific tactical commands (Lunge, Feint, Pierce, Fracture for Hamlet; Repel, Interpose, Solidify, Disarm for Gertrude).
 
 ### 3. Procedural Level Generation & Genetic Algorithms
 Levels are not hand-crafted. They are generated and rigorously tested offline:
-* **Level Generator:** Creates a JSON "genotype" mapping the grid coordinates for all stage elements (Arras boundaries, Furniture obstacles, and character starting positions).
+* **Level Generator:** Creates a JSON genotype mapping the grid coordinates for all stage elements (Arras boundaries, Furniture obstacles, and character starting positions).
 * **Bot Tester:** Evaluates fitness by simulating a 9-turn match between a Greedy Hamlet AI and a Greedy Gertrude AI. It ensures levels possess structural tension by seeking a defensive success rate of 20-30%—preventing unwinnable choke points.
 * **SQLite:** Validated levels are saved to `telemetry.sqlite` to be served to the frontend.
 
