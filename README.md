@@ -20,9 +20,9 @@ The backend orchestrator (Node.js/Express) receives audio and passes it through 
 * **The DSL Compiler:** Resolves the player's acoustic performance into 8 character-specific tactical commands (Lunge, Feint, Pierce, Fracture for Hamlet; Repel, Interpose, Solidify, Disarm for Gertrude).
 
 ### 3. Procedural Level Generation & Genetic Algorithms
-Levels are not hand-crafted. They are generated and rigorously tested offline:
+Levels are not hand-crafted. They are generated and tested offline:
 * **Level Generator:** Creates a JSON genotype mapping the grid coordinates for all stage elements (Arras boundaries, Furniture obstacles, and character starting positions).
-* **Bot Tester:** Evaluates fitness by simulating a 9-turn match between a Greedy Hamlet AI and a Greedy Gertrude AI. It ensures levels possess structural tension by seeking a defensive success rate of 20-30%—preventing unwinnable choke points.
+* **Bot Tester:** Evaluates fitness by simulating a 9-turn match between a Greedy Hamlet AI and a Greedy Gertrude AI. It ensures levels possess structural tension by seeking mixed win rates across 5 matches per level.
 * **SQLite:** Validated levels are saved to `telemetry.sqlite` to be served to the frontend.
 
 ## Getting Started
