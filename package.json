@@ -2,14 +2,36 @@
   "name": "you-are-rhyme",
   "version": "1.0.0",
   "description": "Interactive installation exploring formactions via procedural physics",
+  "main": "main.js",
   "scripts": {
+    "start:electron": "electron .",
     "start": "concurrently \"npm run start:server\" \"npm run start:client\" \"npm run start:python\"",
     "start:server": "cd server && npm start",
     "start:client": "cd client && npm run dev",
     "start:python": "cd python && .\\.venv\\Scripts\\python transcriber.py",
-    "install:all": "npm install && cd server && npm install && cd ../client && npm install"
+    "test": "cd server && npm test",
+    "host:mac": "bash scripts/host-mac.sh",
+    "ga": "cd server && node ga-runner.js",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "dist": "electron-builder"
+  },
+  "build": {
+    "appId": "com.youarerhyme.app",
+    "asar": false,
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "main.js",
+      "package.json",
+      "server/**/*",
+      "client/dist/**/*",
+      "python/dist/transcriber.exe"
+    ]
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "electron": "^44.4.1",
+    "electron-builder": "^26.15.3"
   }
 }

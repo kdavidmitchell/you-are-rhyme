@@ -60,7 +60,38 @@ Levels are not hand-crafted. They are generated and rigorously tested offline:
    ```bash
    npm start
    ```
+   
+5. **Play the Game:**
+   Open your web browser and navigate to [http://localhost:5173](http://localhost:5173) to enter the stage!
+
    *(Note: To procedurally generate new levels offline, run `cd server && node ga-runner.js`)*
 
 ## Telemetry & Logging
 All player turns—including raw transcriptions, acoustic metrics, and the resulting DSL commands—are logged to `telemetry.sqlite` to help fine-tune the DSL compiler thresholds.
+
+---
+
+## 2-Player Synchronous Multiplayer (Hamlet vs. Gertrude)
+
+*You Are Rhyme* features a server-synchronized 1v1 multiplayer mode where one human actor portrays **Prince Hamlet** and another portrays **Queen Gertrude**.
+
+### Hosting with the Mac Build Machine
+
+You can host the multiplayer duel on your Mac build machine. To enable remote microphone recording over HTTPS without campus firewall hurdles, the host uses **Cloudflare Quick Tunnels** (`cloudflared`):
+
+1. **Install cloudflared (optional, for instant public HTTPS):**
+   ```bash
+   brew install cloudflared
+   ```
+
+2. **Launch the Mac Multiplayer Host:**
+   ```bash
+   npm run host:mac
+   # or: bash scripts/host-mac.sh
+   ```
+
+3. **Share the Link:**
+   The terminal will output a public HTTPS link (e.g. `https://xxxx.trycloudflare.com`).
+   * **Player 1 (Hamlet)** creates a chamber (e.g., `BARD`) and clicks **"Copy Invitation Link"**.
+   * **Player 2 (Gertrude)** opens the direct link (`https://xxxx.trycloudflare.com/?room=BARD`) and claims Queen Gertrude.
+   * Both actors enter the Queen's Closet stage and duel turn-by-turn.

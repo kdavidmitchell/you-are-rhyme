@@ -1,29 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 
 const TILE_SIZE = 40; // Pixels per tile
 const GRID_WIDTH = 20;
 const GRID_HEIGHT = 15;
 
 const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin }) => {
-    const [entities, setEntities] = useState([]);
+    const [entities, setEntities] = useState(() => config?.entities || []);
+    const [prevConfigId, setPrevConfigId] = useState(config?.id);
 
-    useEffect(() => {
-        if (!config || !config.entities) return;
-        if (!simulationPhase) {
-            setEntities(config.entities);
-        }
-    }, [config, simulationPhase]);
+    // Adjust state during render when a new level configuration arrives
+    if (!simulationPhase && config?.id && config.id !== prevConfigId) {
+        setPrevConfigId(config.id);
+        setEntities(config.entities || []);
+    }
 
-    // Handle incoming commands
-    useEffect(() => {
+    // Handle incoming parameterized commands
+    React.useEffect(() => {
         if (!simulationPhase) return;
-        
+
         let timeoutIds = [];
-        let totalDuration = 1000; // Base 1s delay even with no commands
+        let totalDuration = 1000;
 
         if (commands && commands.length > 0) {
-            totalDuration = (commands.length * 1000) + 1000;
-            
+            totalDuration = (commands.length * 1000) + 700;
+
             commands.forEach((cmd, idx) => {
                 const tId = setTimeout(() => {
                     setEntities(prevEntities => {
@@ -33,88 +33,183 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
                         let polonius = state.find(e => e.type === 'polonius');
                         let hamlet = state.find(e => e.type === 'hamlet');
 
+                        if (!rapier || !hamlet || !polonius) return state;
+
                         let rapierAttached = (hamlet.y === rapier.y && hamlet.x === rapier.x - 1);
 
-                        // Gertrude Defenses
-                        if (cmd.action === 'Solidify') {
-                            const furnitures = state.filter(e => e.type === 'furniture');
+                        const p = cmd.parameters || {};
+                        const action = cmd.action;
+                        const discreteSteps = typeof p.discreteSteps === 'number' ? p.discreteSteps : 2;
+                        const charge = typeof p.charge === 'number' ? p.charge : 0.3;
+                        const agility = typeof p.agility === 'number' ? p.agility : 0.3;
+                        const isCharged = !!p.isCharged || charge >= 0.5;
+                        const isUnstable = !!p.isUnstable || (p.instability || 0) >= 0.4;
+
+                        // -------------------------------------------------------------
+                        // GERTRUDE DEFENSES
+                        // -------------------------------------------------------------
+                        if (action === 'Barricade') {
+                            // Relocate nearest furniture piece directly in front of Hamlet's rapier
+                            const targetX = Math.min(rapier.x + 1, polonius.x - 1);
+                            const targetY = rapier.y;
+                            const furnitures = state.filter(e => e.type === 'furniture' && !(e.x === targetX && e.y === targetY));
                             if (furnitures.length > 0) {
-                                furnitures[Math.floor(Math.random() * furnitures.length)].type = 'arras';
+                                furnitures.sort((a, b) => (Math.abs(a.x - targetX) + Math.abs(a.y - targetY)) - (Math.abs(b.x - targetX) + Math.abs(b.y - targetY)));
+                                furnitures[0].x = targetX;
+                                furnitures[0].y = targetY;
+                            } else if (targetX > rapier.x) {
+                                state.push({ type: 'furniture', x: targetX, y: targetY });
                             }
                         }
-                        if (cmd.action === 'Interpose' && rapier && gertrude && polonius) {
+
+                        if (action === 'Interpose' && gertrude) {
                             gertrude.y = rapier.y;
-                            gertrude.x = Math.floor((rapier.x + polonius.x) / 2);
+                            gertrude.x = Math.max(rapier.x + 1, Math.floor((rapier.x + polonius.x) / 2));
                         }
-                        if (cmd.action === 'Repel' && rapier) {
-                            rapier.x = Math.max(0, rapier.x - 3);
-                            if (rapierAttached) hamlet.x = rapier.x - 1;
+
+                        if (action === 'Repel' && rapier) {
+                            // Capped at 2 tiles so Hamlet gains net ground on forward lunges
+                            const knockback = Math.max(1, Math.min(2, discreteSteps));
+                            rapier.x = Math.max(1, rapier.x - knockback);
+                            if (rapierAttached) {
+                                hamlet.x = Math.max(0, rapier.x - 1);
+                            }
                         }
-                        if (cmd.action === 'Disarm' && rapier) {
-                            if (rapier.y >= 12) rapier.y -= 2;
-                            else rapier.y += 2;
+
+                        if (action === 'Disarm' && rapier) {
+                            const shift = discreteSteps >= 3 ? 3 : 2;
+                            if (rapier.y >= 12) rapier.y -= shift;
+                            else if (rapier.y <= 2) rapier.y += shift;
+                            else rapier.y += (Math.random() > 0.5 ? shift : -shift);
+
+                            rapier.y = Math.max(1, Math.min(13, rapier.y));
                             rapierAttached = false;
                         }
 
-                        // Hamlet Attacks
-                        if (!rapierAttached && cmd.action !== 'Feint') {
-                            return state; // Can't attack without weapon
+                        // -------------------------------------------------------------
+                        // HAMLET ATTACKS
+                        // -------------------------------------------------------------
+                        if (!rapierAttached && action !== 'Feint') {
+                            return state;
                         }
 
-                        if (cmd.action === 'Feint') {
+                        if (action === 'Feint') {
+                            const maneuverSteps = Math.max(1, Math.min(3, Math.round(1 + agility * 2)));
                             if (!rapierAttached) {
-                                if (hamlet.y < rapier.y) hamlet.y = Math.min(hamlet.y + 2, rapier.y);
-                                else if (hamlet.y > rapier.y) hamlet.y = Math.max(hamlet.y - 2, rapier.y);
+                                if (hamlet.y < rapier.y) hamlet.y = Math.min(hamlet.y + maneuverSteps, rapier.y);
+                                else if (hamlet.y > rapier.y) hamlet.y = Math.max(hamlet.y - maneuverSteps, rapier.y);
+
                                 hamlet.x = Math.min(hamlet.x + 1, rapier.x - 1);
-                                if (hamlet.y === rapier.y && hamlet.x === rapier.x - 1) rapierAttached = true;
+                                if (hamlet.y === rapier.y && hamlet.x === rapier.x - 1) {
+                                    rapierAttached = true;
+                                }
                             } else {
-                                if (rapier.y < polonius.y) { rapier.y = Math.min(rapier.y + 2, polonius.y); hamlet.y = rapier.y; }
-                                else if (rapier.y > polonius.y) { rapier.y = Math.max(rapier.y - 2, polonius.y); hamlet.y = rapier.y; }
-                                rapier.x++; hamlet.x++;
+                                if (rapier.y < polonius.y) {
+                                    rapier.y = Math.min(rapier.y + maneuverSteps, polonius.y);
+                                    hamlet.y = rapier.y;
+                                } else if (rapier.y > polonius.y) {
+                                    rapier.y = Math.max(rapier.y - maneuverSteps, polonius.y);
+                                    hamlet.y = rapier.y;
+                                }
+                                rapier.x = Math.min(17, rapier.x + 1);
+                                hamlet.x = rapier.x - 1;
                             }
                         }
 
                         if (rapierAttached) {
-                            if (cmd.action === 'Fracture') {
-                                const adj = state.findIndex(e => (e.type === 'arras' || e.type === 'furniture') && e.x === rapier.x + 1 && e.y === rapier.y);
-                                if (adj !== -1) state.splice(adj, 1);
-                                rapier.x++; hamlet.x++;
+                            if (action === 'Fracture') {
+                                const adjIdx = state.findIndex(e =>
+                                    (e.type === 'arras' || e.type === 'furniture') &&
+                                    e.x === rapier.x + 1 && e.y === rapier.y
+                                );
+                                if (adjIdx !== -1) {
+                                    state.splice(adjIdx, 1);
+                                }
+                                if (isUnstable) {
+                                    const collateralIdx = state.findIndex(e =>
+                                        (e.type === 'arras' || e.type === 'furniture') &&
+                                        e.x === rapier.x + 1 && Math.abs(e.y - rapier.y) === 1
+                                    );
+                                    if (collateralIdx !== -1) {
+                                        state.splice(collateralIdx, 1);
+                                    }
+                                }
+                                rapier.x = Math.min(17, rapier.x + 1);
+                                hamlet.x = rapier.x - 1;
                             }
 
                             let moveDistance = 0;
                             let pierceFurniture = false;
-                            if (cmd.action === 'Lunge') moveDistance = 3;
-                            if (cmd.action === 'Pierce') { moveDistance = 2; pierceFurniture = true; }
+                            let pierceArras = false;
+
+                            if (action === 'Lunge') {
+                                moveDistance = discreteSteps;
+                                if (isCharged) pierceFurniture = true;
+                            }
+
+                            if (action === 'Pierce') {
+                                moveDistance = Math.max(3, discreteSteps);
+                                pierceFurniture = true;
+                                pierceArras = true; // Any Pierce formaction penetrates the arras
+                            }
 
                             if (moveDistance > 0) {
                                 for (let step = 0; step < moveDistance; step++) {
-                                    rapier.x++; hamlet.x++;
-                                    const hit = state.find(e => e !== rapier && e !== hamlet && e.x === rapier.x && e.y === rapier.y);
+                                    rapier.x++;
+                                    hamlet.x++;
+
+                                    const hit = state.find(e =>
+                                        e !== rapier && e !== hamlet &&
+                                        e.x === rapier.x && e.y === rapier.y
+                                    );
+
                                     if (hit) {
                                         if (hit.type === 'polonius' || hit.type === 'dead') {
                                             hit.type = 'dead';
-                                            if (onHamletWin) setTimeout(onHamletWin, 500);
+                                            if (onHamletWin) setTimeout(onHamletWin, 450);
                                             break;
-                                        } else if (hit.type === 'arras' || hit.type === 'gertrude') {
-                                            rapier.x--; hamlet.x--; 
+                                        } else if (hit.type === 'gertrude') {
+                                            rapier.x--;
+                                            hamlet.x--;
                                             break;
-                                        } else if (hit.type === 'furniture' && !pierceFurniture) {
-                                            rapier.x--; hamlet.x--;
-                                            break;
+                                        } else if (hit.type === 'arras') {
+                                            if (!pierceArras) {
+                                                rapier.x--;
+                                                hamlet.x--;
+                                                break;
+                                            } else {
+                                                // Penetrate through the Arras: strikes Polonius if concealed behind this section
+                                                if (polonius && (polonius.y === rapier.y || Math.abs(polonius.y - rapier.y) <= 1)) {
+                                                    rapier.x = polonius.x;
+                                                    rapier.y = polonius.y;
+                                                    hamlet.x = rapier.x - 1;
+                                                    hamlet.y = rapier.y;
+                                                    polonius.type = 'dead';
+                                                    if (onHamletWin) setTimeout(onHamletWin, 450);
+                                                    break;
+                                                }
+                                            }
+                                        } else if (hit.type === 'furniture') {
+                                            if (!pierceFurniture) {
+                                                rapier.x--;
+                                                hamlet.x--;
+                                                break;
+                                            }
                                         }
                                     }
+
+                                    if (rapier.x >= 18) break;
                                 }
                             }
                         }
 
                         return state;
                     });
-                }, idx * 1000); 
+                }, idx * 1000);
                 timeoutIds.push(tId);
             });
         }
 
-        // End turn after animations finish
         const endTurnTimer = setTimeout(() => {
             if (onTurnEnd) onTurnEnd();
         }, totalDuration);
@@ -125,29 +220,162 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
         };
     }, [commands, simulationPhase, onTurnEnd, onHamletWin]);
 
-    const getAsciiForType = (type) => {
-        switch (type) {
-            case 'hamlet': return 'H';
-            case 'gertrude': return 'G';
-            case 'polonius': return 'P';
-            case 'arras': return '|||';
-            case 'rapier': return '==>';
-            case 'furniture': return '[]';
-            case 'dead': return 'X';
-            default: return '?';
-        }
-    };
+    /**
+     * Renders 1604 Inked Quarto lead type blocks and woodcut props.
+     */
+    const renderQuartoEntity = (ent) => {
+        switch (ent.type) {
+            case 'hamlet':
+                return (
+                    <div style={{
+                        width: '34px',
+                        height: '34px',
+                        background: '#14110e',
+                        border: '2px solid #14110e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'Cinzel, Georgia, serif',
+                        fontSize: '19px',
+                        fontWeight: '900',
+                        color: '#f4eee2',
+                        userSelect: 'none'
+                    }}>
+                        H
+                    </div>
+                );
 
-    const getColorForType = (type) => {
-        switch (type) {
-            case 'hamlet': return '#2563eb';
-            case 'gertrude': return '#9333ea';
-            case 'polonius': return '#dc2626';
-            case 'arras': return '#4b5563';
-            case 'rapier': return '#f59e0b';
-            case 'furniture': return '#8b5cf6';
-            case 'dead': return '#000000';
-            default: return '#000';
+            case 'gertrude':
+                return (
+                    <div style={{
+                        width: '34px',
+                        height: '34px',
+                        background: '#5c1e24',
+                        border: '2px solid #14110e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'Cinzel, Georgia, serif',
+                        fontSize: '19px',
+                        fontWeight: '900',
+                        color: '#f4eee2',
+                        userSelect: 'none'
+                    }}>
+                        G
+                    </div>
+                );
+
+            case 'polonius':
+                return (
+                    <div style={{
+                        width: '34px',
+                        height: '34px',
+                        background: '#3a2818',
+                        border: '2px solid #14110e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'Cinzel, Georgia, serif',
+                        fontSize: '19px',
+                        fontWeight: '900',
+                        color: '#f4eee2',
+                        userSelect: 'none'
+                    }}>
+                        P
+                    </div>
+                );
+
+            case 'dead':
+                return (
+                    <div style={{
+                        width: '32px',
+                        height: '32px',
+                        background: '#dfd5c0',
+                        border: '2px dashed #5c1e24',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'Cinzel, Georgia, serif',
+                        fontSize: '18px',
+                        fontWeight: '900',
+                        color: '#5c1e24'
+                    }}>
+                        &#10013;
+                    </div>
+                );
+
+            case 'rapier':
+                return (
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: '38px',
+                        height: '16px',
+                        position: 'relative'
+                    }}>
+                        {/* Iron Crossguard */}
+                        <div style={{ width: '3px', height: '14px', background: '#14110e' }} />
+                        {/* Blade Rule */}
+                        <div style={{
+                            width: '26px',
+                            height: '2.5px',
+                            background: '#14110e'
+                        }} />
+                        {/* Inked Barb Tip */}
+                        <div style={{
+                            width: 0,
+                            height: 0,
+                            borderTop: '3.5px solid transparent',
+                            borderBottom: '3.5px solid transparent',
+                            borderLeft: '6px solid #14110e'
+                        }} />
+                    </div>
+                );
+
+            case 'arras':
+                return (
+                    <div style={{
+                        width: '32px',
+                        height: '38px',
+                        background: '#5c1e24',
+                        border: '2px solid #14110e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#f4eee2',
+                        fontFamily: 'Space Mono, monospace',
+                        fontSize: '10px',
+                        fontWeight: '900',
+                        letterSpacing: '-1px',
+                        userSelect: 'none'
+                    }}>
+                        |||
+                    </div>
+                );
+
+            case 'furniture':
+                return (
+                    <div style={{
+                        width: '30px',
+                        height: '30px',
+                        background: '#cfc3ad',
+                        border: '2px solid #14110e',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontFamily: 'Cinzel, serif',
+                        fontSize: '14px',
+                        color: '#14110e',
+                        fontWeight: '900',
+                        userSelect: 'none'
+                    }}>
+                        &#9632;
+                    </div>
+                );
+
+            default:
+                return null;
         }
     };
 
@@ -156,30 +384,51 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
             position: 'relative',
             width: `${GRID_WIDTH * TILE_SIZE}px`,
             height: `${GRID_HEIGHT * TILE_SIZE}px`,
-            backgroundColor: '#ffffff',
-            fontFamily: '"Courier New", Courier, monospace',
-            fontWeight: 'bold',
-            fontSize: '20px',
+            backgroundColor: '#eae2d0',
             margin: '0 auto',
-            backgroundImage: 'linear-gradient(#f0f0f0 1px, transparent 1px), linear-gradient(90deg, #f0f0f0 1px, transparent 1px)',
+            backgroundImage: `
+                linear-gradient(to right, #cfc5af 1px, transparent 1px),
+                linear-gradient(to bottom, #cfc5af 1px, transparent 1px)
+            `,
             backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
-            border: '4px solid black'
+            border: '4px double #14110e',
+            overflow: 'hidden'
         }}>
+            {/* Typesetter's Stamped Corner Markers */}
+            <div style={{ position: 'absolute', top: '3px', left: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderLeft: '3px solid #14110e', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: '3px', right: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderRight: '3px solid #14110e', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '3px', left: '3px', width: '10px', height: '10px', borderBottom: '3px solid #14110e', borderLeft: '3px solid #14110e', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: '3px', right: '3px', width: '10px', height: '10px', borderBottom: '3px solid #14110e', borderRight: '3px solid #14110e', pointerEvents: 'none' }} />
+
+            {/* Arras Chamber Alcove Hatching (Cols 16-19) */}
+            <div style={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: `${16 * TILE_SIZE}px`,
+                width: `${4 * TILE_SIZE}px`,
+                background: 'rgba(92, 30, 36, 0.08)',
+                borderLeft: '2px dashed #14110e',
+                pointerEvents: 'none'
+            }} />
+
+            {/* Entities Layer */}
             {entities.map(ent => (
-                <div key={ent.id} style={{
-                    position: 'absolute',
-                    left: `${ent.x * TILE_SIZE}px`,
-                    top: `${ent.y * TILE_SIZE}px`,
-                    width: `${TILE_SIZE}px`,
-                    height: `${TILE_SIZE}px`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: getColorForType(ent.type),
-                    transition: 'all 0.3s ease-out', // Smooth snappy animation between grid tiles
-                    zIndex: ent.type === 'rapier' ? 10 : 1
-                }}>
-                    {getAsciiForType(ent.type)}
+                <div
+                    key={ent.id}
+                    style={{
+                        position: 'absolute',
+                        width: `${TILE_SIZE}px`,
+                        height: `${TILE_SIZE}px`,
+                        transform: `translate3d(${ent.x * TILE_SIZE}px, ${ent.y * TILE_SIZE}px, 0)`,
+                        transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: ent.type === 'rapier' ? 15 : (ent.type === 'hamlet' || ent.type === 'gertrude' ? 12 : 5)
+                    }}
+                >
+                    {renderQuartoEntity(ent)}
                 </div>
             ))}
         </div>

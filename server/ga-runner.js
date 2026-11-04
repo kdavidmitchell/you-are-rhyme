@@ -1,3 +1,7 @@
+// ga-runner.js
+// Michael Cook-Inspired Evolutionary Level Design Engine
+// Multi-objective genetic algorithm with 2D MAP-Elites Quality Diversity archive
+
 const { generateLevel, getRandomGenotype } = require('./level-generator');
 const { evaluateFitness, testMechanics } = require('./bot-tester');
 const { db } = require('./db');
@@ -5,9 +9,19 @@ const { Worker } = require('worker_threads');
 const os = require('os');
 const path = require('path');
 
-const POPULATION_SIZE = 50;
-const GENERATIONS = 20;
-const MUTATION_RATE = 0.1;
+const POPULATION_SIZE = 40;
+const GENERATIONS = 15;
+const MUTATION_RATE = 0.15;
+
+// MAP-Elites Grid Dimensions (5x5 = 25 niches)
+const MAP_BINS_X = 5; // Claustrophobia (0.0 to 1.0)
+const MAP_BINS_Y = 5; // Tactical Friction (0.0 to 1.0)
+
+function getMapCell(claustrophobia = 0.5, tacticalFriction = 0.5) {
+    const xBin = Math.min(MAP_BINS_X - 1, Math.max(0, Math.floor(claustrophobia * MAP_BINS_X)));
+    const yBin = Math.min(MAP_BINS_Y - 1, Math.max(0, Math.floor(tacticalFriction * MAP_BINS_Y)));
+    return { xBin, yBin, key: `${xBin}_${yBin}` };
+}
 
 function initializePopulation() {
     return Array.from({ length: POPULATION_SIZE }, () => getRandomGenotype());
@@ -19,8 +33,8 @@ function crossover(parentA, parentB) {
 
     const spatialMix = (arrA, arrB) => {
         const mixed = [];
-        arrA.forEach(item => { if (item.x < cutX) mixed.push(JSON.parse(JSON.stringify(item))); });
-        arrB.forEach(item => { if (item.x >= cutX) mixed.push(JSON.parse(JSON.stringify(item))); });
+        (arrA || []).forEach(item => { if (item.x < cutX) mixed.push(JSON.parse(JSON.stringify(item))); });
+        (arrB || []).forEach(item => { if (item.x >= cutX) mixed.push(JSON.parse(JSON.stringify(item))); });
         return mixed;
     };
 
@@ -37,40 +51,45 @@ function crossover(parentA, parentB) {
 }
 
 function mutate(genotype) {
-    if (Math.random() < MUTATION_RATE) genotype.poloniusY += (Math.random() > 0.5 ? 1 : -1);
-    if (Math.random() < MUTATION_RATE) genotype.arrasStartY += (Math.random() > 0.5 ? 1 : -1);
-    if (Math.random() < MUTATION_RATE) genotype.arrasLength += (Math.random() > 0.5 ? 1 : -1);
-    if (Math.random() < MUTATION_RATE) genotype.gertrudeX += (Math.random() > 0.5 ? 1 : -1);
-    if (Math.random() < MUTATION_RATE) genotype.gertrudeY += (Math.random() > 0.5 ? 1 : -1);
-    if (Math.random() < MUTATION_RATE) genotype.hamletX += (Math.random() > 0.5 ? 1 : -1);
-    if (Math.random() < MUTATION_RATE) genotype.hamletY += (Math.random() > 0.5 ? 1 : -1);
-    
-    genotype.furniture.forEach(furn => {
-        if (Math.random() < MUTATION_RATE) furn.x += (Math.random() > 0.5 ? 1 : -1);
-        if (Math.random() < MUTATION_RATE) furn.y += (Math.random() > 0.5 ? 1 : -1);
-    });
+    const g = JSON.parse(JSON.stringify(genotype));
 
-    if (Math.random() < (MUTATION_RATE / 2)) {
-        if (genotype.furniture.length > 0 && Math.random() > 0.5) {
-            genotype.furniture.splice(Math.floor(Math.random() * genotype.furniture.length), 1);
-        } else {
-            genotype.furniture.push({
-                x: Math.floor(Math.random() * 12) + 4,
-                y: Math.floor(Math.random() * 11) + 2
-            });
+    if (Math.random() < MUTATION_RATE) g.poloniusY += (Math.random() > 0.5 ? 1 : -1);
+    if (Math.random() < MUTATION_RATE) g.arrasStartY += (Math.random() > 0.5 ? 1 : -1);
+    if (Math.random() < MUTATION_RATE) g.arrasLength += (Math.random() > 0.5 ? 1 : -1);
+    if (Math.random() < MUTATION_RATE) g.gertrudeX += (Math.random() > 0.5 ? 1 : -1);
+    if (Math.random() < MUTATION_RATE) g.gertrudeY += (Math.random() > 0.5 ? 1 : -1);
+    if (Math.random() < MUTATION_RATE) g.hamletX += (Math.random() > 0.5 ? 1 : -1);
+    if (Math.random() < MUTATION_RATE) g.hamletY += (Math.random() > 0.5 ? 1 : -1);
+
+    if (Array.isArray(g.furniture)) {
+        g.furniture.forEach(furn => {
+            if (Math.random() < MUTATION_RATE) furn.x += (Math.random() > 0.5 ? 1 : -1);
+            if (Math.random() < MUTATION_RATE) furn.y += (Math.random() > 0.5 ? 1 : -1);
+        });
+
+        // Add or remove furniture
+        if (Math.random() < (MUTATION_RATE / 2)) {
+            if (g.furniture.length > 2 && Math.random() > 0.5) {
+                g.furniture.splice(Math.floor(Math.random() * g.furniture.length), 1);
+            } else if (g.furniture.length < 10) {
+                g.furniture.push({
+                    x: Math.floor(Math.random() * 12) + 4,
+                    y: Math.floor(Math.random() * 11) + 2
+                });
+            }
         }
     }
 
-    // Bounds check
-    genotype.poloniusY = Math.max(1, Math.min(13, genotype.poloniusY));
-    genotype.arrasStartY = Math.max(1, Math.min(12, genotype.arrasStartY));
-    genotype.arrasLength = Math.max(3, Math.min(10, genotype.arrasLength));
-    genotype.gertrudeX = Math.max(8, Math.min(15, genotype.gertrudeX));
-    genotype.gertrudeY = Math.max(1, Math.min(13, genotype.gertrudeY));
-    genotype.hamletX = Math.max(1, Math.min(5, genotype.hamletX));
-    genotype.hamletY = Math.max(1, Math.min(13, genotype.hamletY));
+    // Grid bounds enforcement
+    g.poloniusY = Math.max(1, Math.min(13, g.poloniusY));
+    g.arrasStartY = Math.max(1, Math.min(10, g.arrasStartY));
+    g.arrasLength = Math.max(3, Math.min(10, g.arrasLength));
+    g.gertrudeX = Math.max(7, Math.min(14, g.gertrudeX));
+    g.gertrudeY = Math.max(1, Math.min(13, g.gertrudeY));
+    g.hamletX = Math.max(1, Math.min(5, g.hamletX));
+    g.hamletY = Math.max(1, Math.min(13, g.hamletY));
 
-    return genotype;
+    return g;
 }
 
 function selectParent(populationWithFitness) {
@@ -82,58 +101,80 @@ function selectParent(populationWithFitness) {
             best = candidate;
         }
     }
-    return best.genotype;
+    return best ? best.genotype : getRandomGenotype();
 }
 
 function saveElitesToDB(elites) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
         db.serialize(() => {
-            db.run(`CREATE TABLE IF NOT EXISTS levels (
-                id TEXT PRIMARY KEY,
-                config TEXT,
-                solution TEXT,
-                par INTEGER
-            )`);
-            
-            db.run('DELETE FROM levels'); 
-            
-            const stmt = db.prepare('INSERT OR REPLACE INTO levels (id, config, solution, par) VALUES (?, ?, ?, ?)');
-            
-            let completed = 0;
-            if (elites.length === 0) resolve();
-            
-            elites.forEach(elite => {
-                stmt.run(elite.config.id, JSON.stringify(elite.config), JSON.stringify(elite.solutions), 18, (err) => {
-                    if (err) console.error("DB Error:", err);
-                    completed++;
-                    if (completed === elites.length) {
-                        stmt.finalize();
-                        resolve();
-                    }
+            // Drop old schema if present and create modern MAP-Elites schema
+            db.run('DROP TABLE IF EXISTS levels', (dropErr) => {
+                if (dropErr) console.error("Error dropping old levels table:", dropErr);
+
+                db.run(`CREATE TABLE levels (
+                    id TEXT PRIMARY KEY,
+                    config TEXT,
+                    solution TEXT,
+                    par INTEGER,
+                    fitness REAL,
+                    claustrophobia REAL,
+                    tactical_friction REAL,
+                    map_cell TEXT,
+                    entropy_score REAL,
+                    tension_score REAL,
+                    counterplay_score REAL
+                )`, (createErr) => {
+                    if (createErr) return reject(createErr);
+
+                    if (!elites || elites.length === 0) return resolve();
+
+                    const stmt = db.prepare(`INSERT OR REPLACE INTO levels 
+                        (id, config, solution, par, fitness, claustrophobia, tactical_friction, map_cell, entropy_score, tension_score, counterplay_score) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+                    let completed = 0;
+                    elites.forEach(elite => {
+                        const cell = getMapCell(
+                            elite.features ? elite.features.claustrophobia : 0.5,
+                            elite.features ? elite.features.tacticalFriction : 0.5
+                        );
+
+                        const bd = elite.breakdown || {};
+                        stmt.run(
+                            elite.config.id,
+                            JSON.stringify(elite.config),
+                            JSON.stringify(elite.solutions || []),
+                            18,
+                            elite.fitness || 0,
+                            elite.features ? elite.features.claustrophobia : 0.5,
+                            elite.features ? elite.features.tacticalFriction : 0.5,
+                            cell.key,
+                            bd.entropyScore || 0,
+                            bd.tensionScore || 0,
+                            bd.counterplayScore || 0,
+                            (runErr) => {
+                                if (runErr) console.error("DB Insert error:", runErr);
+                                completed++;
+                                if (completed === elites.length) {
+                                    stmt.finalize();
+                                    resolve();
+                                }
+                            }
+                        );
+                    });
                 });
             });
         });
     });
 }
 
-function getFingerprint(item) {
-    return item.solutions.slice().sort().join(',');
-}
-
-function isTooSimilar(item1, item2) {
-    const sameSolutions = getFingerprint(item1) === getFingerprint(item2);
-    const samePolonius = item1.genotype.poloniusY === item2.genotype.poloniusY;
-    const sameHamlet = item1.genotype.hamletY === item2.genotype.hamletY;
-    return sameSolutions && samePolonius && sameHamlet;
-}
-
 async function evaluatePopulationParallel(population, gen) {
     return new Promise((resolve) => {
-        const numWorkers = Math.min(os.cpus().length, 8);
+        const numWorkers = Math.min(os.cpus().length, 6);
         const workers = [];
         const evaluated = [];
         let completed = 0;
-        
+
         const queue = population.map((genotype, index) => {
             return {
                 id: index,
@@ -154,7 +195,9 @@ async function evaluatePopulationParallel(population, gen) {
                     genotype: task.genotype,
                     config: task.config,
                     fitness: result.fitness,
-                    solutions: result.solutions
+                    solutions: result.solutions,
+                    features: result.features,
+                    breakdown: result.breakdown
                 });
                 completed++;
             }
@@ -182,66 +225,86 @@ async function evaluatePopulationParallel(population, gen) {
     });
 }
 
-async function runGA() {
-    console.log("Initializing Generation 0...");
+async function runGA(maxGens = GENERATIONS) {
+    console.log("=== Michael Cook Multi-Faceted GA & MAP-Elites Engine ===");
+    console.log(`Population: ${POPULATION_SIZE} | Generations: ${maxGens} | Grid: ${MAP_BINS_X}x${MAP_BINS_Y} MAP-Elites`);
+
     let population = initializePopulation();
-    let allTimeElites = [];
-    
+    const mapElitesArchive = new Map(); // key -> elite individual
+
     let gen = 0;
-    while (true) {
+    while (gen < maxGens) {
         console.log(`\n--- Generation ${gen} ---`);
         const evaluated = await evaluatePopulationParallel(population, gen);
 
         const sorted = evaluated.sort((a, b) => b.fitness - a.fitness);
         const maxFitness = sorted[0].fitness;
         const avgFitness = sorted.reduce((sum, item) => sum + item.fitness, 0) / POPULATION_SIZE;
-        
+
         console.log(`Max Fitness: ${maxFitness.toFixed(2)} | Avg Fitness: ${avgFitness.toFixed(2)}`);
-        
-        const playables = sorted.filter(item => item.fitness > 0);
-        console.log(`Playable levels found: ${playables.length}`);
-        
-        const uniquePlayables = [];
-        for (const p of playables) {
-            if (!uniquePlayables.some(u => isTooSimilar(u, p))) uniquePlayables.push(p);
+
+        // Place qualifying individuals into 2D MAP-Elites Archive
+        let newOccupants = 0;
+        for (const ind of evaluated) {
+            if (ind.fitness > 0 && ind.features) {
+                const cell = getMapCell(ind.features.claustrophobia, ind.features.tacticalFriction);
+                const existing = mapElitesArchive.get(cell.key);
+                if (!existing || ind.fitness > existing.fitness) {
+                    mapElitesArchive.set(cell.key, ind);
+                    newOccupants++;
+                }
+            }
         }
 
-        const mergedElites = [...allTimeElites, ...uniquePlayables];
-        const uniqueElites = [];
-        for (const e of mergedElites) {
-             if (!uniqueElites.some(u => isTooSimilar(u, e))) uniqueElites.push(e);
-        }
-        
-        allTimeElites = uniqueElites.sort((a, b) => b.fitness - a.fitness).slice(0, 20);
+        console.log(`MAP-Elites Filled Cells: ${mapElitesArchive.size}/${MAP_BINS_X * MAP_BINS_Y} (+${newOccupants} updated this gen)`);
 
-        if (gen >= GENERATIONS) {
-            console.log("Target generations reached.");
-            break;
-        }
+        gen++;
+        if (gen >= maxGens) break;
 
+        // Form next generation through Elitism + Tournament Selection + Crossover + Mutation
         let nextPopulation = [];
         nextPopulation.push(sorted[0].genotype);
         nextPopulation.push(sorted[1].genotype);
+
+        // Also inject random elites from MAP archive to maintain diversity
+        const archiveArray = Array.from(mapElitesArchive.values());
+        if (archiveArray.length > 0) {
+            const randomNicheElite = archiveArray[Math.floor(Math.random() * archiveArray.length)];
+            nextPopulation.push(randomNicheElite.genotype);
+        }
 
         while (nextPopulation.length < POPULATION_SIZE) {
             const parentA = selectParent(sorted);
             const parentB = selectParent(sorted);
             let child = crossover(parentA, parentB);
-            child = mutate(child); 
+            child = mutate(child);
             nextPopulation.push(child);
         }
         population = nextPopulation;
-        gen++;
     }
 
-    console.log(`\nGA Completed. Saving top ${allTimeElites.length} evolved levels to database.`);
-    await saveElitesToDB(allTimeElites);
-    console.log("Save complete. Shutting down.");
-    process.exit(0);
+    const elitesToSave = Array.from(mapElitesArchive.values());
+    console.log(`\nGA Completed. Saving ${elitesToSave.length} MAP-Elites evolved levels to database.`);
+    await saveElitesToDB(elitesToSave);
+    console.log("Database update complete.");
+    return elitesToSave;
 }
 
 if (require.main === module) {
-    runGA();
+    runGA().then(() => {
+        console.log("Exiting GA process.");
+        process.exit(0);
+    }).catch(err => {
+        console.error("Fatal GA error:", err);
+        process.exit(1);
+    });
 }
 
-module.exports = { crossover, mutate, selectParent };
+module.exports = {
+    runGA,
+    crossover,
+    mutate,
+    selectParent,
+    getMapCell,
+    saveElitesToDB
+};
