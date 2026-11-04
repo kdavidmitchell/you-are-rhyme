@@ -106,6 +106,7 @@ if ! command -v cloudflared &> /dev/null; then
     fi
     curl -sSL "$CF_URL" -o "$BIN_DIR/cloudflared"
     chmod +x "$BIN_DIR/cloudflared"
+    xattr -d com.apple.quarantine "$BIN_DIR/cloudflared" 2>/dev/null || true
     echo "      -> cloudflared binary installed to $BIN_DIR/cloudflared"
 fi
 
