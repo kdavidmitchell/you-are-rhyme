@@ -13,17 +13,29 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
     React.useEffect(() => {
         const updateScale = () => {
             if (containerRef.current) {
-                const availWidth = containerRef.current.clientWidth;
+                const parent = containerRef.current.parentElement;
+                const availWidth = parent ? (parent.clientWidth - 16) : containerRef.current.clientWidth;
                 if (availWidth > 0 && availWidth < (GRID_WIDTH * TILE_SIZE)) {
-                    setScale(availWidth / (GRID_WIDTH * TILE_SIZE));
+                    setScale(Math.max(0.35, availWidth / (GRID_WIDTH * TILE_SIZE)));
                 } else {
                     setScale(1);
                 }
             }
         };
+
         updateScale();
+
+        let ro = null;
+        if (typeof ResizeObserver !== 'undefined' && containerRef.current?.parentElement) {
+            ro = new ResizeObserver(() => updateScale());
+            ro.observe(containerRef.current.parentElement);
+        }
+
         window.addEventListener('resize', updateScale);
-        return () => window.removeEventListener('resize', updateScale);
+        return () => {
+            if (ro) ro.disconnect();
+            window.removeEventListener('resize', updateScale);
+        };
     }, []);
 
     // Adjust state during render when a new level configuration arrives
@@ -413,17 +425,32 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
         }
     };
 
+    const actualWidth = scale < 1 ? Math.floor(GRID_WIDTH * TILE_SIZE * scale) : (GRID_WIDTH * TILE_SIZE);
+    const actualHeight = scale < 1 ? Math.floor(GRID_HEIGHT * TILE_SIZE * scale) : (GRID_HEIGHT * TILE_SIZE);
+
     return (
-        <div ref={containerRef} style={{ width: '100%', maxWidth: `${GRID_WIDTH * TILE_SIZE}px`, display: 'flex', justifyContent: 'center' }}>
+        <div
+            ref={containerRef}
+            style={{
+                width: `${actualWidth}px`,
+                maxWidth: '100%',
+                height: `${actualHeight}px`,
+                minWidth: 0,
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'flex-start',
+                overflow: 'hidden',
+                margin: '0 auto'
+            }}
+        >
             <div style={{
                 position: 'relative',
                 width: `${GRID_WIDTH * TILE_SIZE}px`,
                 height: `${GRID_HEIGHT * TILE_SIZE}px`,
-                backgroundColor: '#eae2d0',
-                margin: '0 auto',
+                flexShrink: 0,
                 transform: scale < 1 ? `scale(${scale})` : undefined,
-                transformOrigin: 'top center',
-                marginBottom: scale < 1 ? `${-(GRID_HEIGHT * TILE_SIZE * (1 - scale))}px` : undefined,
+                transformOrigin: 'top left',
+                backgroundColor: '#eae2d0',
                 backgroundImage: `
                     linear-gradient(to right, #cfc5af 1px, transparent 1px),
                     linear-gradient(to bottom, #cfc5af 1px, transparent 1px)
