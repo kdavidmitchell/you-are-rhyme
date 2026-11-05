@@ -14,9 +14,10 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
         const updateScale = () => {
             if (containerRef.current) {
                 const parent = containerRef.current.parentElement;
-                const availWidth = parent ? (parent.clientWidth - 16) : containerRef.current.clientWidth;
-                if (availWidth > 0 && availWidth < (GRID_WIDTH * TILE_SIZE)) {
-                    setScale(Math.max(0.35, availWidth / (GRID_WIDTH * TILE_SIZE)));
+                const availWidth = parent ? parent.clientWidth : containerRef.current.clientWidth;
+                const baseWidth = 820;
+                if (availWidth > 0 && availWidth < baseWidth) {
+                    setScale(Math.max(0.35, availWidth / baseWidth));
                 } else {
                     setScale(1);
                 }
@@ -425,8 +426,10 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
         }
     };
 
-    const actualWidth = scale < 1 ? Math.floor(GRID_WIDTH * TILE_SIZE * scale) : (GRID_WIDTH * TILE_SIZE);
-    const actualHeight = scale < 1 ? Math.floor(GRID_HEIGHT * TILE_SIZE * scale) : (GRID_HEIGHT * TILE_SIZE);
+    const baseWidth = 820;
+    const baseHeight = 620;
+    const actualWidth = scale < 1 ? Math.floor(baseWidth * scale) : baseWidth;
+    const actualHeight = scale < 1 ? Math.floor(baseHeight * scale) : baseHeight;
 
     return (
         <div
@@ -438,27 +441,43 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
                 minWidth: 0,
                 display: 'flex',
                 justifyContent: 'center',
-                alignItems: 'flex-start',
+                alignItems: 'center',
                 overflow: 'hidden',
                 margin: '0 auto'
             }}
         >
-            <div style={{
-                position: 'relative',
-                width: `${GRID_WIDTH * TILE_SIZE}px`,
-                height: `${GRID_HEIGHT * TILE_SIZE}px`,
-                flexShrink: 0,
-                transform: scale < 1 ? `scale(${scale})` : undefined,
-                transformOrigin: 'top left',
-                backgroundColor: '#eae2d0',
-                backgroundImage: `
-                    linear-gradient(to right, #cfc5af 1px, transparent 1px),
-                    linear-gradient(to bottom, #cfc5af 1px, transparent 1px)
-                `,
-                backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
-                border: '4px double #14110e',
-                overflow: 'hidden'
-            }}>
+            {/* Authentic Elizabethan Proscenium Framing (Outer Double Rule + Woodcut Matting) */}
+            <div
+                style={{
+                    position: 'relative',
+                    width: `${baseWidth}px`,
+                    height: `${baseHeight}px`,
+                    flexShrink: 0,
+                    transform: scale < 1 ? `scale(${scale})` : undefined,
+                    transformOrigin: 'top center',
+                    border: '4px double #14110e',
+                    backgroundColor: '#dfd5c0',
+                    padding: '6px',
+                    boxSizing: 'border-box',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}
+            >
+                {/* Tactical Chamber Stage Surface */}
+                <div style={{
+                    position: 'relative',
+                    width: `${GRID_WIDTH * TILE_SIZE}px`,
+                    height: `${GRID_HEIGHT * TILE_SIZE}px`,
+                    backgroundColor: '#eae2d0',
+                    backgroundImage: `
+                        linear-gradient(to right, #cfc5af 1px, transparent 1px),
+                        linear-gradient(to bottom, #cfc5af 1px, transparent 1px)
+                    `,
+                    backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
+                    border: '4px double #14110e',
+                    overflow: 'hidden'
+                }}>
                 {/* Typesetter's Stamped Corner Markers */}
                 <div style={{ position: 'absolute', top: '3px', left: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderLeft: '3px solid #14110e', pointerEvents: 'none' }} />
                 <div style={{ position: 'absolute', top: '3px', right: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderRight: '3px solid #14110e', pointerEvents: 'none' }} />
@@ -496,6 +515,7 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
                         {renderQuartoEntity(ent)}
                     </div>
                 ))}
+                </div>
             </div>
         </div>
     );

@@ -878,15 +878,13 @@ function App() {
 
         {/* Center Column: The Composing Stick Stage */}
         <main className="stage-center-column">
-          <div className="stage-outer-framing">
-            <GameEngine
-              config={levelConfig}
-              commands={dslCommands}
-              simulationPhase={status === 'SIMULATING'}
-              onTurnEnd={handleTurnEnd}
-              onHamletWin={handleHamletWin}
-            />
-          </div>
+          <GameEngine
+            config={levelConfig}
+            commands={dslCommands}
+            simulationPhase={status === 'SIMULATING'}
+            onTurnEnd={handleTurnEnd}
+            onHamletWin={handleHamletWin}
+          />
 
           {/* In-Situ Stage Direction Marginalia Ticker */}
           <div className="marginalia-ticker-box">
