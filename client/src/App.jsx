@@ -195,6 +195,17 @@ function App() {
       setResolutionModal(null);
     });
 
+    // Room reset event (resets match state & brings players back to playbill)
+    socket.on('room-reset', () => {
+      setResolutionModal(null);
+      setTranscript("");
+      setCompilationBreakdown(null);
+      setDslCommands([]);
+      setStatus('IDLE');
+      setStageDirection("[A new chamber arrangement is drawn from the archives of Elsinore.]");
+      setInStage(false);
+    });
+
     // Auto-join if roomCode in URL
     if (roomCode) {
       socket.emit('join-room', { roomCode, token: playerToken }, (res) => {
@@ -399,6 +410,15 @@ function App() {
 
   const handleReturnToPlaybill = () => {
     setResolutionModal(null);
+    setTranscript("");
+    setCompilationBreakdown(null);
+    setDslCommands([]);
+    setStatus('IDLE');
+    setStageDirection("[A new chamber arrangement is drawn from the archives of Elsinore.]");
+    const effectiveRoom = roomCode || 'DEFAULT';
+    socketRef.current?.emit('reset-room', { roomCode: effectiveRoom }, () => {
+      fetch(getApiUrl(`/api/room/${effectiveRoom}/reset`), { method: 'POST' }).catch(() => {});
+    });
     setInStage(false);
   };
 
@@ -622,7 +642,7 @@ function App() {
                 {copyFeedback || "Copy Link"}
               </button>
             )}
-            <button className="stamp-btn" onClick={() => setInStage(false)}>
+            <button className="stamp-btn" onClick={handleReturnToPlaybill}>
               Playbill
             </button>
           </div>

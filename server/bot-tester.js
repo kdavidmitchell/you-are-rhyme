@@ -140,11 +140,27 @@ function simulateTurn(state, hamletInput, gertrudeInput) {
                 }
             } else {
                 // Strategic repositioning: adjust Y towards Polonius corridor
+                const gertrudeInWay = gertrude && gertrude.y === rapier.y && gertrude.x > rapier.x;
                 if (rapier.y < polonius.y) {
                     rapier.y = Math.min(rapier.y + maneuverSteps, polonius.y);
                     hamlet.y = rapier.y;
                 } else if (rapier.y > polonius.y) {
                     rapier.y = Math.max(rapier.y - maneuverSteps, polonius.y);
+                    hamlet.y = rapier.y;
+                } else if (gertrudeInWay) {
+                    // Already on the same row as Polonius, but Gertrude is blocking the path.
+                    // Randomly maneuver up or down around Gertrude.
+                    const canGoUp = rapier.y > 1;
+                    const canGoDown = rapier.y < 13;
+                    let dir = 0;
+                    if (canGoUp && canGoDown) {
+                        dir = Math.random() < 0.5 ? -1 : 1;
+                    } else if (canGoUp) {
+                        dir = -1;
+                    } else if (canGoDown) {
+                        dir = 1;
+                    }
+                    rapier.y = Math.max(0, Math.min(14, rapier.y + dir));
                     hamlet.y = rapier.y;
                 }
                 rapier.x = Math.min(17, rapier.x + 1);

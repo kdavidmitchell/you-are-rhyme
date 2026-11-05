@@ -323,6 +323,7 @@ io.on('connection', (socket) => {
 
             room.currentLineIndex = 0;
             room.currentLevel = await loadRandomEliteLevel();
+            io.to(code).emit('room-reset');
             broadcastRoomState(code);
 
             if (typeof callback === 'function') callback({ success: true, state: getRoomState(room) });

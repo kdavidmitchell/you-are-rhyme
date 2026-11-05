@@ -7,6 +7,24 @@ const GRID_HEIGHT = 15;
 const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin }) => {
     const [entities, setEntities] = useState(() => config?.entities || []);
     const [prevConfigId, setPrevConfigId] = useState(config?.id);
+    const containerRef = React.useRef(null);
+    const [scale, setScale] = useState(1);
+
+    React.useEffect(() => {
+        const updateScale = () => {
+            if (containerRef.current) {
+                const availWidth = containerRef.current.clientWidth;
+                if (availWidth > 0 && availWidth < (GRID_WIDTH * TILE_SIZE)) {
+                    setScale(availWidth / (GRID_WIDTH * TILE_SIZE));
+                } else {
+                    setScale(1);
+                }
+            }
+        };
+        updateScale();
+        window.addEventListener('resize', updateScale);
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
 
     // Adjust state during render when a new level configuration arrives
     if (!simulationPhase && config?.id && config.id !== prevConfigId) {
@@ -104,11 +122,27 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
                                     rapierAttached = true;
                                 }
                             } else {
+                                const gertrudeInWay = gertrude && gertrude.y === rapier.y && gertrude.x > rapier.x;
                                 if (rapier.y < polonius.y) {
                                     rapier.y = Math.min(rapier.y + maneuverSteps, polonius.y);
                                     hamlet.y = rapier.y;
                                 } else if (rapier.y > polonius.y) {
                                     rapier.y = Math.max(rapier.y - maneuverSteps, polonius.y);
+                                    hamlet.y = rapier.y;
+                                } else if (gertrudeInWay) {
+                                    // Already on the same row as Polonius, but Gertrude is blocking the path.
+                                    // Randomly maneuver up or down around Gertrude.
+                                    const canGoUp = rapier.y > 1;
+                                    const canGoDown = rapier.y < 13;
+                                    let dir = 0;
+                                    if (canGoUp && canGoDown) {
+                                        dir = Math.random() < 0.5 ? -1 : 1;
+                                    } else if (canGoUp) {
+                                        dir = -1;
+                                    } else if (canGoDown) {
+                                        dir = 1;
+                                    }
+                                    rapier.y = Math.max(0, Math.min(14, rapier.y + dir));
                                     hamlet.y = rapier.y;
                                 }
                                 rapier.x = Math.min(17, rapier.x + 1);
@@ -380,57 +414,62 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
     };
 
     return (
-        <div style={{
-            position: 'relative',
-            width: `${GRID_WIDTH * TILE_SIZE}px`,
-            height: `${GRID_HEIGHT * TILE_SIZE}px`,
-            backgroundColor: '#eae2d0',
-            margin: '0 auto',
-            backgroundImage: `
-                linear-gradient(to right, #cfc5af 1px, transparent 1px),
-                linear-gradient(to bottom, #cfc5af 1px, transparent 1px)
-            `,
-            backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
-            border: '4px double #14110e',
-            overflow: 'hidden'
-        }}>
-            {/* Typesetter's Stamped Corner Markers */}
-            <div style={{ position: 'absolute', top: '3px', left: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderLeft: '3px solid #14110e', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', top: '3px', right: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderRight: '3px solid #14110e', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: '3px', left: '3px', width: '10px', height: '10px', borderBottom: '3px solid #14110e', borderLeft: '3px solid #14110e', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: '3px', right: '3px', width: '10px', height: '10px', borderBottom: '3px solid #14110e', borderRight: '3px solid #14110e', pointerEvents: 'none' }} />
-
-            {/* Arras Chamber Alcove Hatching (Cols 16-19) */}
+        <div ref={containerRef} style={{ width: '100%', maxWidth: `${GRID_WIDTH * TILE_SIZE}px`, display: 'flex', justifyContent: 'center' }}>
             <div style={{
-                position: 'absolute',
-                top: 0,
-                bottom: 0,
-                left: `${16 * TILE_SIZE}px`,
-                width: `${4 * TILE_SIZE}px`,
-                background: 'rgba(92, 30, 36, 0.08)',
-                borderLeft: '2px dashed #14110e',
-                pointerEvents: 'none'
-            }} />
+                position: 'relative',
+                width: `${GRID_WIDTH * TILE_SIZE}px`,
+                height: `${GRID_HEIGHT * TILE_SIZE}px`,
+                backgroundColor: '#eae2d0',
+                margin: '0 auto',
+                transform: scale < 1 ? `scale(${scale})` : undefined,
+                transformOrigin: 'top center',
+                marginBottom: scale < 1 ? `${-(GRID_HEIGHT * TILE_SIZE * (1 - scale))}px` : undefined,
+                backgroundImage: `
+                    linear-gradient(to right, #cfc5af 1px, transparent 1px),
+                    linear-gradient(to bottom, #cfc5af 1px, transparent 1px)
+                `,
+                backgroundSize: `${TILE_SIZE}px ${TILE_SIZE}px`,
+                border: '4px double #14110e',
+                overflow: 'hidden'
+            }}>
+                {/* Typesetter's Stamped Corner Markers */}
+                <div style={{ position: 'absolute', top: '3px', left: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderLeft: '3px solid #14110e', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: '3px', right: '3px', width: '10px', height: '10px', borderTop: '3px solid #14110e', borderRight: '3px solid #14110e', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '3px', left: '3px', width: '10px', height: '10px', borderBottom: '3px solid #14110e', borderLeft: '3px solid #14110e', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '3px', right: '3px', width: '10px', height: '10px', borderBottom: '3px solid #14110e', borderRight: '3px solid #14110e', pointerEvents: 'none' }} />
 
-            {/* Entities Layer */}
-            {entities.map(ent => (
-                <div
-                    key={ent.id}
-                    style={{
-                        position: 'absolute',
-                        width: `${TILE_SIZE}px`,
-                        height: `${TILE_SIZE}px`,
-                        transform: `translate3d(${ent.x * TILE_SIZE}px, ${ent.y * TILE_SIZE}px, 0)`,
-                        transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        zIndex: ent.type === 'rapier' ? 15 : (ent.type === 'hamlet' || ent.type === 'gertrude' ? 12 : 5)
-                    }}
-                >
-                    {renderQuartoEntity(ent)}
-                </div>
-            ))}
+                {/* Arras Chamber Alcove Hatching (Cols 16-19) */}
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: `${16 * TILE_SIZE}px`,
+                    width: `${4 * TILE_SIZE}px`,
+                    background: 'rgba(92, 30, 36, 0.08)',
+                    borderLeft: '2px dashed #14110e',
+                    pointerEvents: 'none'
+                }} />
+
+                {/* Entities Layer */}
+                {entities.map(ent => (
+                    <div
+                        key={ent.id}
+                        style={{
+                            position: 'absolute',
+                            width: `${TILE_SIZE}px`,
+                            height: `${TILE_SIZE}px`,
+                            transform: `translate3d(${ent.x * TILE_SIZE}px, ${ent.y * TILE_SIZE}px, 0)`,
+                            transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: ent.type === 'rapier' ? 15 : (ent.type === 'hamlet' || ent.type === 'gertrude' ? 12 : 5)
+                        }}
+                    >
+                        {renderQuartoEntity(ent)}
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };

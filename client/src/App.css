@@ -11,6 +11,13 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+}
+
+@media (max-width: 1200px) {
+  .quarto-app {
+    padding: 1rem 1rem 2rem 1rem;
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -119,21 +126,48 @@
 
 .quarto-stage-layout {
   display: grid;
-  grid-template-columns: 350px 1fr 330px;
-  gap: 1.75rem;
+  grid-template-columns: 330px minmax(auto, 1fr) 310px;
+  gap: 1.5rem;
   align-items: start;
 }
 
-@media (max-width: 1400px) {
+@media (max-width: 1440px) {
   .quarto-stage-layout {
-    grid-template-columns: 310px 1fr 290px;
-    gap: 1.25rem;
+    grid-template-columns: 290px minmax(440px, 1fr) 280px;
+    gap: 1rem;
   }
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1140px) {
   .quarto-stage-layout {
-    grid-template-columns: 1fr;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  .stage-center-column {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+  .cue-roll-column {
+    grid-column: 1;
+    width: 100%;
+  }
+  .dramatic-ledger-column {
+    grid-column: 2;
+    width: 100%;
+  }
+}
+
+@media (max-width: 850px) {
+  .quarto-stage-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .stage-center-column,
+  .cue-roll-column,
+  .dramatic-ledger-column {
+    width: 100%;
   }
 }
 
@@ -576,12 +610,18 @@
   border: 4px double var(--ink-black);
   background: var(--paper-dark);
   padding: 6px;
+  width: 100%;
+  max-width: 820px;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
 }
 
 /* In-Situ Stage Direction Marginalia */
 .marginalia-ticker-box {
   width: 100%;
   max-width: 820px;
+  box-sizing: border-box;
   background: var(--paper-panel);
   border: 2px solid var(--ink-black);
   padding: 0.85rem 1.25rem;
@@ -619,6 +659,7 @@
 .telemetry-marginalia-bar {
   width: 100%;
   max-width: 820px;
+  box-sizing: border-box;
   background: var(--paper-panel);
   border: 2px solid var(--ink-black);
   padding: 0.55rem 1rem;
@@ -629,6 +670,8 @@
   font-size: 0.72rem;
   font-weight: bold;
   color: var(--ink-black);
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .telemetry-marginalia-bar span strong {
@@ -716,8 +759,10 @@
 
 .broadside-portal-container {
   max-width: 1080px;
-  margin: 2rem auto;
-  padding: 2.5rem;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 1.5rem auto;
+  padding: clamp(1.25rem, 3.5vw, 2.5rem);
   background: var(--paper-panel);
   border: 6px double var(--ink-black);
   display: flex;
@@ -736,18 +781,19 @@
 
 .broadside-heading-large {
   font-family: var(--font-serif-heavy);
-  font-size: 3rem;
+  font-size: clamp(1.85rem, 5vw, 3rem);
   font-weight: 900;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-black);
   margin: 0 0 0.4rem 0;
   line-height: 1.1;
+  word-break: break-word;
 }
 
 .broadside-subheading {
   font-family: var(--font-verse);
-  font-size: 1.4rem;
+  font-size: clamp(1.05rem, 2.5vw, 1.4rem);
   font-style: italic;
   font-weight: 700;
   color: var(--ink-crimson);
@@ -756,12 +802,14 @@
 
 .broadside-treatise-box {
   max-width: 820px;
+  width: 100%;
+  box-sizing: border-box;
   background: var(--paper-base);
   border: 2px solid var(--ink-black);
-  padding: 1.25rem 1.75rem;
-  margin-bottom: 2.25rem;
+  padding: clamp(1rem, 2.5vw, 1.75rem);
+  margin-bottom: 2rem;
   font-family: var(--font-verse);
-  font-size: 1.15rem;
+  font-size: clamp(0.95rem, 2vw, 1.15rem);
   line-height: 1.6;
   color: var(--ink-black);
   text-align: justify;
@@ -769,7 +817,7 @@
 
 .broadside-role-triptych {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1.5rem;
   width: 100%;
 }
