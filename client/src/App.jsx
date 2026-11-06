@@ -651,9 +651,9 @@ function App() {
         {/* Tactical Mechanics Directive Banner */}
         <div className="quarto-tactics-banner">
           <div className="tactics-overview-bar">
-            <span className="tactics-overview-badge">TACTICAL BRIEFING</span>
+            <span className="tactics-overview-badge">OBJECTIVE</span>
             <span className="tactics-overview-text">
-              <strong>Objective:</strong> Hamlet seeks to drive his rapier through the arras to strike Polonius. Gertrude must preserve the counselor by blocking lanes, shifting furniture, and disarming the Prince until Measure XVIII concludes.
+              Hamlet seeks to drive his rapier through the arras to strike Polonius. Gertrude must preserve the counselor by blocking lanes, shifting furniture, and disarming the Prince until Measure XVIII concludes.
             </span>
           </div>
 
@@ -698,7 +698,7 @@ function App() {
                     <span className="move-trigger">Misquote / Corrupt Verse</span>
                   </div>
                   <p className="move-desc">
-                    Unleashes textual chaos that shatters chamber props. <strong>When to use:</strong> To permanently obliterate dense obstacle barricades.
+                    Shatters obstacles/arras. <strong>When to use:</strong> To destroy furniture barricades or tear open the arras tapestry.
                   </p>
                 </div>
               </div>
@@ -717,7 +717,7 @@ function App() {
                     <span className="move-trigger">Louder / High Volume</span>
                   </div>
                   <p className="move-desc">
-                    Blunts kinetic momentum, pushing Hamlet back 1&ndash;2 paces. <strong>When to use:</strong> When Hamlet closes in dangerously close to the arras alcove.
+                    Pushes Hamlet's rapier back 1&ndash;2 paces. <strong>When to use:</strong> When Hamlet closes in dangerously close to the arras alcove.
                   </p>
                 </div>
                 <div className="tactics-move-item">
@@ -726,7 +726,7 @@ function App() {
                     <span className="move-trigger">Dramatic Pause &gt; 1.5s</span>
                   </div>
                   <p className="move-desc">
-                    Overturns heavy furniture directly in Hamlet's path. <strong>When to use:</strong> When Hamlet has an open lane and needs an obstacle in his way.
+                    Creates obstacle in front of Hamlet. <strong>When to use:</strong> When Hamlet has an open lane and needs an obstacle in his way.
                   </p>
                 </div>
                 <div className="tactics-move-item">
@@ -916,87 +916,6 @@ function App() {
               </div>
             )}
           </div>
-
-          {/* Formaction Physical Mechanics Table */}
-          <div className="typesetter-box">
-            <div className="box-woodcut-heading">
-              <span>Speech Mechanics</span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--ink-crimson)' }}>ACOUSTIC MAPPING</span>
-            </div>
-            <table className="mechanics-print-table">
-              <tbody>
-                {(role === 'HAMLET' || role === 'SPECTATOR') && (
-                  <>
-                    <tr>
-                      <td className="action-slug">LUNGE</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">Amplitude (RMS)</span>
-                        <span className="channel-desc">Linear Thrust 1-4 Paces</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="action-slug">PIERCE</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">&gt;1.5s Silence</span>
-                        <span className="channel-desc">Pierces Furniture &amp; Arras</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="action-slug">FEINT</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">Cadence (&plusmn;WPM)</span>
-                        <span className="channel-desc">Realigns Stance / Recovers Blade</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="action-slug">FRACTURE</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">Verse Corruption</span>
-                        <span className="channel-desc">Destroys Obstacles &amp; Arras</span>
-                      </td>
-                    </tr>
-                  </>
-                )}
-                {(role === 'QUEEN' || role === 'SPECTATOR') && (
-                  <>
-                    {role === 'SPECTATOR' && (
-                      <tr>
-                        <td colSpan="2" style={{ borderTop: '2px solid var(--ink-black)', padding: '2px 0' }} />
-                      </tr>
-                    )}
-                    <tr>
-                      <td className="action-slug">REPEL</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">Amplitude (RMS)</span>
-                        <span className="channel-desc">Pushes Rapier Back 1-2 Paces</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="action-slug">BARRICADE</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">&gt;1.5s Silence</span>
-                        <span className="channel-desc">Overturns Furniture in Path</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="action-slug">INTERPOSE</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">Cadence (&plusmn;WPM)</span>
-                        <span className="channel-desc">Shields Corridor Directly</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="action-slug">DISARM</td>
-                      <td className="channel-note">
-                        <span className="channel-trigger">Verse Corruption</span>
-                        <span className="channel-desc">Dislodges Prince's Weapon</span>
-                      </td>
-                    </tr>
-                  </>
-                )}
-              </tbody>
-            </table>
-          </div>
         </aside>
 
         {/* Center Column: The Composing Stick Stage */}
@@ -1094,68 +1013,56 @@ function App() {
           {/* Stagecraft Board Legend */}
           <div className="typesetter-box">
             <div className="box-woodcut-heading">
-              <span>Stagecraft Legend</span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--ink-crimson)' }}>BOARD PIECES</span>
+              <span>Board Legend</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--ink-crimson)' }}>PIECES</span>
             </div>
 
             <div className="legend-entries-list">
               <div className="legend-entry-row">
                 <div className="legend-token-box legend-token-hamlet">H</div>
                 <div className="legend-text-col">
-                  <span className="legend-item-title">Prince Hamlet (Attacker)</span>
-                  <p className="legend-item-desc">
-                    The vengeful Prince. Commands the rapier forward; aims to pierce through the arras and strike Polonius before Measure XVIII.
-                  </p>
+                  <span className="legend-item-title">Hamlet</span>
+                  <span className="legend-item-desc">Attacker</span>
                 </div>
               </div>
 
               <div className="legend-entry-row">
                 <div className="legend-token-box legend-token-gertrude">G</div>
                 <div className="legend-text-col">
-                  <span className="legend-item-title">Queen Gertrude (Defender)</span>
-                  <p className="legend-item-desc">
-                    The Queen Mother. Body-blocks lanes, shifts heavy furniture into corridors, and disarms Hamlet to preserve the counselor.
-                  </p>
+                  <span className="legend-item-title">Gertrude</span>
+                  <span className="legend-item-desc">Defender</span>
                 </div>
               </div>
 
               <div className="legend-entry-row">
                 <div className="legend-token-box legend-token-polonius">P</div>
                 <div className="legend-text-col">
-                  <span className="legend-item-title">Lord Polonius (Target)</span>
-                  <p className="legend-item-desc">
-                    Lord Chamberlain concealed behind the arras. If Hamlet's rapier penetrates his tile, Hamlet wins.
-                  </p>
+                  <span className="legend-item-title">Polonius</span>
+                  <span className="legend-item-desc">Target (behind Arras)</span>
                 </div>
               </div>
 
               <div className="legend-entry-row">
                 <div className="legend-token-box legend-token-rapier">&mdash;&gt;</div>
                 <div className="legend-text-col">
-                  <span className="legend-item-title">The Dueling Rapier</span>
-                  <p className="legend-item-desc">
-                    Hamlet's physical weapon. Moves with Hamlet; knocked back by Repel, dislodged by Disarm, or realigned by Feint.
-                  </p>
+                  <span className="legend-item-title">Rapier</span>
+                  <span className="legend-item-desc">Hamlet's Weapon</span>
                 </div>
               </div>
 
               <div className="legend-entry-row">
                 <div className="legend-token-box legend-token-arras">|||</div>
                 <div className="legend-text-col">
-                  <span className="legend-item-title">The Arras (Tapestry)</span>
-                  <p className="legend-item-desc">
-                    Heavy wall hangings shielding Polonius's alcove. Blocks ordinary lunges; pierced by Pierce (&gt;1.5s pause) or Fracture.
-                  </p>
+                  <span className="legend-item-title">Arras</span>
+                  <span className="legend-item-desc">Tapestry Wall</span>
                 </div>
               </div>
 
               <div className="legend-entry-row">
                 <div className="legend-token-box legend-token-furniture">&#9632;</div>
                 <div className="legend-text-col">
-                  <span className="legend-item-title">Heavy Furniture</span>
-                  <p className="legend-item-desc">
-                    Chamber obstacles (tables, trunks). Obstruct linear lunges; relocated by Gertrude's Barricade or shattered by Fracture.
-                  </p>
+                  <span className="legend-item-title">Furniture</span>
+                  <span className="legend-item-desc">Obstacle</span>
                 </div>
               </div>
             </div>
