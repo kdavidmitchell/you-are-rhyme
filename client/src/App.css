@@ -112,12 +112,174 @@
   color: var(--paper-base);
 }
 
-.quarto-synopsis-bar {
+/* -------------------------------------------------------------------------- */
+/* Tactical Mechanics Directive Banner                                        */
+/* -------------------------------------------------------------------------- */
+
+.quarto-tactics-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.tactics-overview-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--paper-base);
+  border: 1.5px solid var(--ink-black);
+  box-sizing: border-box;
+  flex-wrap: wrap;
+}
+
+.tactics-overview-badge {
+  font-family: var(--font-serif-heavy);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  color: var(--paper-base);
+  background: var(--ink-crimson);
+  padding: 0.2rem 0.5rem;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.tactics-overview-text {
   font-family: var(--font-verse);
   font-size: 0.98rem;
+  color: var(--ink-black);
+  line-height: 1.4;
+  flex: 1;
+  min-width: 240px;
+}
+
+.tactics-overview-text strong {
+  font-family: var(--font-serif-heavy);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-crimson);
+}
+
+.tactics-roster-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .tactics-roster-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tactics-card {
+  background: var(--paper-base);
+  border: 1.5px solid var(--ink-black);
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.tactics-card.tactics-card-active {
+  border: 2px solid var(--ink-crimson);
+  box-shadow: 0 0 0 1px var(--ink-crimson);
+  background: rgba(92, 30, 36, 0.03);
+}
+
+.tactics-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--ink-black);
+  padding-bottom: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tactics-card-title {
+  font-family: var(--font-serif-heavy);
+  font-size: 0.88rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-black);
+}
+
+.tactics-role-badge {
+  font-family: var(--font-print);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--ink-crimson);
+  text-transform: uppercase;
+}
+
+.tactics-moves-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tactics-move-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border-bottom: 1px dashed var(--ink-faint);
+  padding-bottom: 0.45rem;
+}
+
+.tactics-move-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.move-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.move-name {
+  font-family: var(--font-serif-heavy);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: var(--ink-black);
+  text-transform: uppercase;
+}
+
+.move-trigger {
+  font-family: var(--font-print);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--ink-crimson);
+  text-align: right;
+}
+
+.move-desc {
+  font-family: var(--font-verse);
+  font-size: 0.84rem;
   color: var(--ink-muted);
-  line-height: 1.45;
+  line-height: 1.35;
   margin: 0;
+}
+
+.move-desc strong {
+  font-family: var(--font-serif-heavy);
+  font-size: 0.72rem;
+  color: var(--ink-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -833,37 +995,106 @@
   margin: 0;
 }
 
-/* Actor State Rows */
-.actor-stamp-row {
+/* Stagecraft Board Legend */
+.legend-entries-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.legend-entry-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--ink-faint);
+  background: rgba(20, 17, 14, 0.02);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.legend-token-box {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.55rem 0.75rem;
-  border: 1.5px solid var(--ink-black);
-  background: var(--paper-base);
-}
-
-.actor-stamp-name {
+  justify-content: center;
+  border: 2px solid var(--ink-black);
+  box-sizing: border-box;
+  user-select: none;
   font-family: var(--font-serif-heavy);
-  font-size: 0.85rem;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  flex-shrink: 0;
 }
 
-.actor-status-tag {
+.legend-token-hamlet {
+  background: #14110e;
+  color: #f4eee2;
+}
+
+.legend-token-gertrude {
+  background: #5c1e24;
+  color: #f4eee2;
+}
+
+.legend-token-polonius {
+  background: #3a2818;
+  color: #f4eee2;
+}
+
+.legend-token-rapier {
+  background: var(--paper-base);
+  border-style: dashed;
   font-family: var(--font-print);
-  font-size: 0.7rem;
-  font-weight: 900;
-  padding: 0.2rem 0.5rem;
-  border: 1px solid var(--ink-black);
-  letter-spacing: 0.06em;
+  font-size: 11px;
+  font-weight: bold;
+  color: #14110e;
 }
 
-.tag-armed { background: var(--ink-black); color: var(--paper-base); }
-.tag-vigilant { background: var(--ink-crimson); color: var(--paper-base); }
-.tag-concealed { background: var(--paper-dark); color: var(--ink-black); }
-.tag-slain { background: #000; color: #fff; text-decoration: line-through; }
+.legend-token-arras {
+  background: #5c1e24;
+  color: #f4eee2;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: -1px;
+}
+
+.legend-token-furniture {
+  background: #cfc3ad;
+  color: #14110e;
+  font-size: 13px;
+}
+
+.legend-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.legend-item-title {
+  font-family: var(--font-serif-heavy);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--ink-black);
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+
+.legend-item-desc {
+  font-family: var(--font-verse);
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--ink-muted);
+  line-height: 1.3;
+  margin: 0;
+}
 
 /* -------------------------------------------------------------------------- */
 /* 7. Theatrical Broadside Title Portal                                       */

@@ -124,7 +124,29 @@ node server/index.js &
 NODE_PID=$!
 sleep 2
 
-# 11. Launch Tunnel
+# 11. Launch Tunnel & Auto-Open Browser
+open_tunnel_and_browser() {
+    local opened=0
+    while IFS= read -r line; do
+        printf '%s\n' "$line"
+        if [ $opened -eq 0 ] && [[ "$line" =~ (https://[a-zA-Z0-9.-]+\.trycloudflare\.com) ]]; then
+            local tunnel_url="${BASH_REMATCH[1]}"
+            opened=1
+            echo ""
+            echo "================================================================="
+            echo "   [Host] Cloudflare Quick Tunnel Established!"
+            echo "   Opening chamber in your browser: $tunnel_url"
+            echo "================================================================="
+            echo ""
+            if command -v open &> /dev/null; then
+                open "$tunnel_url"
+            elif command -v xdg-open &> /dev/null; then
+                xdg-open "$tunnel_url"
+            fi
+        fi
+    done
+}
+
 echo ""
 echo "================================================================="
 echo "   YOU ARE RHYME IS NOW LIVE ON YOUR MAC!"
@@ -132,8 +154,8 @@ echo "================================================================="
 echo "Local access: http://localhost:3001"
 echo ""
 echo "Starting Cloudflare Quick Tunnel for remote HTTPS & microphone..."
-echo "Watch the logs below for your public https://*.trycloudflare.com link!"
+echo "The public link will open automatically in your browser!"
 echo "================================================================="
 echo ""
 
-cloudflared tunnel --url http://localhost:3001
+cloudflared tunnel --url http://localhost:3001 2>&1 | open_tunnel_and_browser

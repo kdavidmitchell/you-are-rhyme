@@ -150,12 +150,32 @@ try {
 
     if ($CloudflaredExe -and (Test-Path $CloudflaredExe)) {
         Write-Host "Starting Cloudflare Quick Tunnel for remote HTTPS & microphone..." -ForegroundColor Cyan
-        Write-Host "Watch the output below for your public https://*.trycloudflare.com link!`n" -ForegroundColor Yellow
+        Write-Host "The public HTTPS link will be automatically extracted and opened in your browser!`n" -ForegroundColor Yellow
         Write-Host "Press Ctrl+C to terminate the host and all background services." -ForegroundColor Gray
         Write-Host "=================================================================`n" -ForegroundColor Cyan
-        & $CloudflaredExe tunnel --url http://localhost:3001
+
+        $cfOpened = $false
+        & $CloudflaredExe tunnel --url http://localhost:3001 2>&1 | ForEach-Object {
+            $line = $_.ToString()
+            Write-Host $line
+            if (-not $cfOpened -and $line -match "(https://[a-zA-Z0-9.-]+\.trycloudflare\.com)") {
+                $cfUrl = $matches[1]
+                $cfOpened = $true
+                Write-Host "`n=================================================================" -ForegroundColor Green
+                Write-Host "   [Host] Cloudflare Quick Tunnel Established!" -ForegroundColor Green
+                Write-Host "   Opening chamber in your browser: $cfUrl" -ForegroundColor Yellow
+                Write-Host "=================================================================`n" -ForegroundColor Green
+                try {
+                    Start-Process $cfUrl
+                } catch {
+                    Write-Host "      [!] Could not launch browser automatically: $_" -ForegroundColor Yellow
+                }
+            }
+        }
     } else {
         Write-Host "`n[NOTE] 'cloudflared' was not found. Remote players over LAN can use http://<LAN-IP>:3001" -ForegroundColor Yellow
+        Write-Host "Opening local chamber http://localhost:3001 in your browser..." -ForegroundColor Cyan
+        try { Start-Process "http://localhost:3001" } catch {}
         Write-Host "Press Ctrl+C to stop the host." -ForegroundColor Gray
         Write-Host "=================================================================`n" -ForegroundColor Cyan
         Wait-Process -Id $nodeProcess.Id

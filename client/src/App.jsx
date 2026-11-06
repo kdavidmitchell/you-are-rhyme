@@ -648,9 +648,109 @@ function App() {
           </div>
         </div>
 
-        <p className="quarto-synopsis-bar">
-          Spoken verse dictates mechanical control upon the stage. Vocal amplitude drives kinetic lunges; dramatic silences charge penetrative thrusts; cadence shifts evade defenses; textual corruption shatters the chamber.
-        </p>
+        {/* Tactical Mechanics Directive Banner */}
+        <div className="quarto-tactics-banner">
+          <div className="tactics-overview-bar">
+            <span className="tactics-overview-badge">TACTICAL BRIEFING</span>
+            <span className="tactics-overview-text">
+              <strong>Objective:</strong> Hamlet seeks to drive his rapier through the arras to strike Polonius. Gertrude must preserve the counselor by blocking lanes, shifting furniture, and disarming the Prince until Measure XVIII concludes.
+            </span>
+          </div>
+
+          <div className="tactics-roster-grid">
+            {/* Hamlet's Offensive Formactions */}
+            <div className={`tactics-card ${role === 'HAMLET' ? 'tactics-card-active' : ''}`}>
+              <div className="tactics-card-header">
+                <span className="tactics-card-title">Hamlet &bull; Attacker</span>
+                <span className="tactics-role-badge">OFFENSIVE ARSENAL</span>
+              </div>
+              <div className="tactics-moves-list">
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">LUNGE</span>
+                    <span className="move-trigger">Louder / High Volume</span>
+                  </div>
+                  <p className="move-desc">
+                    Thrusts blade 1&ndash;4 paces forward. <strong>When to use:</strong> When the lane ahead is clear to close ground rapidly.
+                  </p>
+                </div>
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">PIERCE</span>
+                    <span className="move-trigger">Dramatic Pause &gt; 1.5s</span>
+                  </div>
+                  <p className="move-desc">
+                    Delivers a penetrating thrust through obstacles. <strong>When to use:</strong> When furniture or the arras blocks your direct line to Polonius.
+                  </p>
+                </div>
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">FEINT</span>
+                    <span className="move-trigger">Shift Cadence (Pace)</span>
+                  </div>
+                  <p className="move-desc">
+                    Realigns vertical stance up/down and recovers blade. <strong>When to use:</strong> When Gertrude body-blocks your row or your weapon was dislodged.
+                  </p>
+                </div>
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">FRACTURE</span>
+                    <span className="move-trigger">Misquote / Corrupt Verse</span>
+                  </div>
+                  <p className="move-desc">
+                    Unleashes textual chaos that shatters chamber props. <strong>When to use:</strong> To permanently obliterate dense obstacle barricades.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Gertrude's Defensive Formactions */}
+            <div className={`tactics-card ${role === 'QUEEN' ? 'tactics-card-active' : ''}`}>
+              <div className="tactics-card-header">
+                <span className="tactics-card-title">Gertrude &bull; Defender</span>
+                <span className="tactics-role-badge">DEFENSIVE COUNTERS</span>
+              </div>
+              <div className="tactics-moves-list">
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">REPEL</span>
+                    <span className="move-trigger">Louder / High Volume</span>
+                  </div>
+                  <p className="move-desc">
+                    Blunts kinetic momentum, pushing Hamlet back 1&ndash;2 paces. <strong>When to use:</strong> When Hamlet closes in dangerously close to the arras alcove.
+                  </p>
+                </div>
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">BARRICADE</span>
+                    <span className="move-trigger">Dramatic Pause &gt; 1.5s</span>
+                  </div>
+                  <p className="move-desc">
+                    Overturns heavy furniture directly in Hamlet's path. <strong>When to use:</strong> When Hamlet has an open lane and needs an obstacle in his way.
+                  </p>
+                </div>
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">INTERPOSE</span>
+                    <span className="move-trigger">Shift Cadence (Pace)</span>
+                  </div>
+                  <p className="move-desc">
+                    Steps Gertrude's body directly between Hamlet and Polonius. <strong>When to use:</strong> When no furniture is nearby and you must shield the target.
+                  </p>
+                </div>
+                <div className="tactics-move-item">
+                  <div className="move-title-row">
+                    <span className="move-name">DISARM</span>
+                    <span className="move-trigger">Misquote / Corrupt Verse</span>
+                  </div>
+                  <p className="move-desc">
+                    Dislodges the Prince's weapon from his grip. <strong>When to use:</strong> When Hamlet is lined up for a lethal thrust, buying precious measures.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
 
       {/* Main Three-Column Composing Layout */}
@@ -991,44 +1091,72 @@ function App() {
             </table>
           </div>
 
-          {/* Dramatis Personae State Rows */}
+          {/* Stagecraft Board Legend */}
           <div className="typesetter-box">
             <div className="box-woodcut-heading">
-              <span>Dramatis Personae</span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--ink-crimson)' }}>VITALITY</span>
+              <span>Stagecraft Legend</span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--ink-crimson)' }}>BOARD PIECES</span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-              <div className="actor-stamp-row">
-                <div>
-                  <div className="actor-stamp-name">Hamlet</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>
-                    {hamletPlayer?.connected ? (isHamletClaimedByMe ? 'You' : 'Opponent') : 'Awaiting Actor'}
-                  </div>
+            <div className="legend-entries-list">
+              <div className="legend-entry-row">
+                <div className="legend-token-box legend-token-hamlet">H</div>
+                <div className="legend-text-col">
+                  <span className="legend-item-title">Prince Hamlet (Attacker)</span>
+                  <p className="legend-item-desc">
+                    The vengeful Prince. Commands the rapier forward; aims to pierce through the arras and strike Polonius before Measure XVIII.
+                  </p>
                 </div>
-                <span className="actor-status-tag tag-armed">
-                  {stageDirection.includes('dislodging') ? '[ DISARMED ]' : '[ ARMED ]'}
-                </span>
               </div>
 
-              <div className="actor-stamp-row">
-                <div>
-                  <div className="actor-stamp-name">Gertrude</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>
-                    {queenPlayer?.connected ? (isQueenClaimedByMe ? 'You' : 'Opponent') : 'Awaiting Actor'}
-                  </div>
+              <div className="legend-entry-row">
+                <div className="legend-token-box legend-token-gertrude">G</div>
+                <div className="legend-text-col">
+                  <span className="legend-item-title">Queen Gertrude (Defender)</span>
+                  <p className="legend-item-desc">
+                    The Queen Mother. Body-blocks lanes, shifts heavy furniture into corridors, and disarms Hamlet to preserve the counselor.
+                  </p>
                 </div>
-                <span className="actor-status-tag tag-vigilant">[ VIGILANT ]</span>
               </div>
 
-              <div className="actor-stamp-row">
-                <div>
-                  <div className="actor-stamp-name">Polonius</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--ink-muted)', fontStyle: 'italic' }}>Lord Chamberlaine</div>
+              <div className="legend-entry-row">
+                <div className="legend-token-box legend-token-polonius">P</div>
+                <div className="legend-text-col">
+                  <span className="legend-item-title">Lord Polonius (Target)</span>
+                  <p className="legend-item-desc">
+                    Lord Chamberlain concealed behind the arras. If Hamlet's rapier penetrates his tile, Hamlet wins.
+                  </p>
                 </div>
-                <span className={`actor-status-tag ${stageDirection.includes('Exit POLONIUS') ? 'tag-slain' : 'tag-concealed'}`}>
-                  {stageDirection.includes('Exit POLONIUS') ? '[ SLAIN ]' : '[ CONCEALED ]'}
-                </span>
+              </div>
+
+              <div className="legend-entry-row">
+                <div className="legend-token-box legend-token-rapier">&mdash;&gt;</div>
+                <div className="legend-text-col">
+                  <span className="legend-item-title">The Dueling Rapier</span>
+                  <p className="legend-item-desc">
+                    Hamlet's physical weapon. Moves with Hamlet; knocked back by Repel, dislodged by Disarm, or realigned by Feint.
+                  </p>
+                </div>
+              </div>
+
+              <div className="legend-entry-row">
+                <div className="legend-token-box legend-token-arras">|||</div>
+                <div className="legend-text-col">
+                  <span className="legend-item-title">The Arras (Tapestry)</span>
+                  <p className="legend-item-desc">
+                    Heavy wall hangings shielding Polonius's alcove. Blocks ordinary lunges; pierced by Pierce (&gt;1.5s pause) or Fracture.
+                  </p>
+                </div>
+              </div>
+
+              <div className="legend-entry-row">
+                <div className="legend-token-box legend-token-furniture">&#9632;</div>
+                <div className="legend-text-col">
+                  <span className="legend-item-title">Heavy Furniture</span>
+                  <p className="legend-item-desc">
+                    Chamber obstacles (tables, trunks). Obstruct linear lunges; relocated by Gertrude's Barricade or shattered by Fracture.
+                  </p>
+                </div>
               </div>
             </div>
           </div>

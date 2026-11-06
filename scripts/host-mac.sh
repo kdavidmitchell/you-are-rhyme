@@ -61,15 +61,37 @@ echo "      -> Node.js server active (PID: $NODE_PID) on port 3001"
 # Brief sleep to let services bind
 sleep 2
 
-# 4. Check for cloudflared
+# 4. Check for cloudflared & stream logs with auto browser launch
+open_tunnel_and_browser() {
+    local opened=0
+    while IFS= read -r line; do
+        printf '%s\n' "$line"
+        if [ $opened -eq 0 ] && [[ "$line" =~ (https://[a-zA-Z0-9.-]+\.trycloudflare\.com) ]]; then
+            local tunnel_url="${BASH_REMATCH[1]}"
+            opened=1
+            echo ""
+            echo "================================================================="
+            echo "   [Host] Cloudflare Quick Tunnel Established!"
+            echo "   Opening chamber in your browser: $tunnel_url"
+            echo "================================================================="
+            echo ""
+            if command -v open &> /dev/null; then
+                open "$tunnel_url"
+            elif command -v xdg-open &> /dev/null; then
+                xdg-open "$tunnel_url"
+            fi
+        fi
+    done
+}
+
 echo ""
 if command -v cloudflared &> /dev/null; then
     echo "================================================================="
     echo "   Launching Cloudflare Quick Tunnel (HTTPS)..."
-    echo "   Both actors can connect from any network with working mic!"
+    echo "   The public link will open automatically in your browser!"
     echo "================================================================="
     echo ""
-    cloudflared tunnel --url http://localhost:3001
+    cloudflared tunnel --url http://localhost:3001 2>&1 | open_tunnel_and_browser
 else
     echo "================================================================="
     echo " [NOTE] 'cloudflared' was not found in your PATH."
@@ -81,6 +103,9 @@ else
     echo "   http://$LOCAL_IP:3001"
     echo "   http://localhost:3001"
     echo "================================================================="
+    if command -v open &> /dev/null; then
+        open "http://localhost:3001"
+    fi
     echo "Press Ctrl+C to stop the host."
     wait $NODE_PID
 fi
