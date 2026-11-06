@@ -11,6 +11,8 @@
     "start:python": "cd python && .\\.venv\\Scripts\\python transcriber.py",
     "test": "cd server && npm test",
     "host:mac": "bash scripts/host-mac.sh",
+    "host:win": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/host-windows.ps1",
+    "setup:win": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/setup-and-host-windows.ps1",
     "ga": "cd server && node ga-runner.js",
     "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "dist": "electron-builder"

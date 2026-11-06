@@ -744,10 +744,8 @@ function App() {
                 {/* Candidate Formactions Percentage & Drive Meters */}
                 <div className="compilation-drives-table">
                   <div className="drives-header-row">
-                    <span className="col-action">Formaction</span>
-                    <span className="col-pct">Share</span>
-                    <span className="col-meter">Drive vs. Threshold</span>
-                    <span className="col-verdict">Result</span>
+                    <span>Candidate Formaction</span>
+                    <span>Share &bull; Result</span>
                   </div>
 
                   {compilationBreakdown.drives.map((d) => (
@@ -755,13 +753,24 @@ function App() {
                       key={d.action}
                       className={`drive-entry-row ${d.isWinner ? 'winner-entry' : ''}`}
                     >
-                      <div className="col-action">
-                        <span className="drive-name">{d.action}</span>
-                        <span className="drive-raw">{d.rawMetric}</span>
-                      </div>
+                      <div className="drive-row-primary">
+                        <div className="col-action">
+                          <span className="drive-name">{d.action}</span>
+                          <span className="drive-raw">{d.rawMetric}</span>
+                        </div>
 
-                      <div className="col-pct">
-                        <span className="drive-pct-num">{d.percentage}%</span>
+                        <div className="drive-metrics-badge-group">
+                          <span className="drive-pct-num">{d.percentage}%</span>
+                          <div className="col-verdict">
+                            {d.isWinner ? (
+                              <span className="verdict-tag winner">[★] WON</span>
+                            ) : d.normScore >= d.threshold ? (
+                              <span className="verdict-tag passed">[ ] MET</span>
+                            ) : (
+                              <span className="verdict-tag low">[-] LOW</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <div className="col-meter">
@@ -778,18 +787,8 @@ function App() {
                         </div>
                         <div className="drive-meter-sub">
                           <span>drive: {d.normScore.toFixed(2)}</span>
-                          <span>th: {d.threshold.toFixed(2)}</span>
+                          <span>threshold: {d.threshold.toFixed(2)}</span>
                         </div>
-                      </div>
-
-                      <div className="col-verdict">
-                        {d.isWinner ? (
-                          <span className="verdict-tag winner">[★] WON</span>
-                        ) : d.normScore >= d.threshold ? (
-                          <span className="verdict-tag passed">[ ] MET</span>
-                        ) : (
-                          <span className="verdict-tag low">[-] LOW</span>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -830,19 +829,31 @@ function App() {
                   <>
                     <tr>
                       <td className="action-slug">LUNGE</td>
-                      <td className="channel-note">Amplitude (RMS) &bull; Linear Thrust 1-4 Paces</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">Amplitude (RMS)</span>
+                        <span className="channel-desc">Linear Thrust 1-4 Paces</span>
+                      </td>
                     </tr>
                     <tr>
                       <td className="action-slug">PIERCE</td>
-                      <td className="channel-note">&gt;1.5s Silence &bull; Pierces Furniture &amp; Arras</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">&gt;1.5s Silence</span>
+                        <span className="channel-desc">Pierces Furniture &amp; Arras</span>
+                      </td>
                     </tr>
                     <tr>
                       <td className="action-slug">FEINT</td>
-                      <td className="channel-note">Cadence (&plusmn;WPM) &bull; Realigns Stance / Recovers Blade</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">Cadence (&plusmn;WPM)</span>
+                        <span className="channel-desc">Realigns Stance / Recovers Blade</span>
+                      </td>
                     </tr>
                     <tr>
                       <td className="action-slug">FRACTURE</td>
-                      <td className="channel-note">Verse Corruption &bull; Destroys Obstacles &amp; Arras</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">Verse Corruption</span>
+                        <span className="channel-desc">Destroys Obstacles &amp; Arras</span>
+                      </td>
                     </tr>
                   </>
                 )}
@@ -855,19 +866,31 @@ function App() {
                     )}
                     <tr>
                       <td className="action-slug">REPEL</td>
-                      <td className="channel-note">Amplitude (RMS) &bull; Pushes Rapier Back 1-2 Paces</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">Amplitude (RMS)</span>
+                        <span className="channel-desc">Pushes Rapier Back 1-2 Paces</span>
+                      </td>
                     </tr>
                     <tr>
                       <td className="action-slug">BARRICADE</td>
-                      <td className="channel-note">&gt;1.5s Silence &bull; Overturns Furniture in Path</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">&gt;1.5s Silence</span>
+                        <span className="channel-desc">Overturns Furniture in Path</span>
+                      </td>
                     </tr>
                     <tr>
                       <td className="action-slug">INTERPOSE</td>
-                      <td className="channel-note">Cadence (&plusmn;WPM) &bull; Shields Corridor Directly</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">Cadence (&plusmn;WPM)</span>
+                        <span className="channel-desc">Shields Corridor Directly</span>
+                      </td>
                     </tr>
                     <tr>
                       <td className="action-slug">DISARM</td>
-                      <td className="channel-note">Verse Corruption &bull; Dislodges Prince's Weapon</td>
+                      <td className="channel-note">
+                        <span className="channel-trigger">Verse Corruption</span>
+                        <span className="channel-desc">Dislodges Prince's Weapon</span>
+                      </td>
                     </tr>
                   </>
                 )}
@@ -945,18 +968,24 @@ function App() {
                 <tr>
                   <td className="action-slug">CLAUSTROPHOBIA</td>
                   <td className="channel-note">
-                    {levelConfig?.claustrophobia ? `${Math.round(levelConfig.claustrophobia * 100)}% Dense` : 'Moderate'}
+                    <span className="channel-trigger">
+                      {levelConfig?.claustrophobia ? `${Math.round(levelConfig.claustrophobia * 100)}% Dense` : 'Moderate'}
+                    </span>
                   </td>
                 </tr>
                 <tr>
-                  <td className="action-slug">TACTICAL_RESISTANCE</td>
+                  <td className="action-slug">TACTICAL RESISTANCE</td>
                   <td className="channel-note">
-                    {levelConfig?.tacticalFriction ? `${Math.round(levelConfig.tacticalFriction * 100)}% Friction` : 'Calculated'}
+                    <span className="channel-trigger">
+                      {levelConfig?.tacticalFriction ? `${Math.round(levelConfig.tacticalFriction * 100)}% Friction` : 'Calculated'}
+                    </span>
                   </td>
                 </tr>
                 <tr>
-                  <td className="action-slug">NICHE_LOCUS</td>
-                  <td className="channel-note">{levelConfig?.mapCell || 'Archival Elite'}</td>
+                  <td className="action-slug">NICHE LOCUS</td>
+                  <td className="channel-note">
+                    <span className="channel-trigger">{levelConfig?.mapCell || 'Archival Elite'}</span>
+                  </td>
                 </tr>
               </tbody>
             </table>

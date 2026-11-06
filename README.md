@@ -75,6 +75,31 @@ All player turns—including raw transcriptions, acoustic metrics, and the resul
 
 *You Are Rhyme* features a server-synchronized 1v1 multiplayer mode where one human actor portrays **Prince Hamlet** and another portrays **Queen Gertrude**.
 
+### Hosting with Windows
+
+You can host the multiplayer chamber on any Windows machine:
+
+1. **Option A: Dedicated Host Launcher (Inside Clone)**
+   If you already cloned the repository:
+   ```cmd
+   npm run host:win
+   :: or simply double-click:
+   scripts\host-windows.bat
+   ```
+
+2. **Option B: Turnkey Windows Setup (Automatic Dependencies)**
+   For a clean or fresh Windows computer, run:
+   ```cmd
+   scripts\setup-and-host-windows.bat
+   ```
+   This will verify Git, Node.js, and Python, install dependencies, download `cloudflared.exe` automatically if needed, and start the host with a public HTTPS tunnel.
+
+3. **Share the Link:**
+   The terminal will output local LAN addresses and a public HTTPS link (e.g. `https://xxxx.trycloudflare.com`).
+   * **Player 1 (Hamlet)** creates a chamber (e.g., `BARD`) and clicks **"Copy Invitation Link"**.
+   * **Player 2 (Gertrude)** opens the link and claims Queen Gertrude.
+   * Both actors enter the Queen's Closet stage and duel turn-by-turn.
+
 ### Hosting with the Mac Build Machine
 
 You can host the multiplayer duel on your Mac build machine. To enable remote microphone recording over HTTPS without campus firewall hurdles, the host uses **Cloudflare Quick Tunnels** (`cloudflared`):
@@ -88,6 +113,8 @@ You can host the multiplayer duel on your Mac build machine. To enable remote mi
    ```bash
    npm run host:mac
    # or: bash scripts/host-mac.sh
+   # or for turnkey setup on clean Mac:
+   # bash scripts/setup-and-host-mac.sh
    ```
 
 3. **Share the Link:**
