@@ -49,7 +49,7 @@ function normalizeCommand(rawCmd, defaultAction, actor) {
  * Simulates a single game turn with parameterized formactions.
  * Consumed identically by server simulation and bot testing.
  */
-function simulateTurn(state, hamletInput, gertrudeInput) {
+function simulateTurn(state, hamletInput, gertrudeInput, context = {}) {
     const hamletCmd = normalizeCommand(hamletInput, 'Lunge', 'HAMLET');
     const gertrudeCmd = normalizeCommand(gertrudeInput, 'Interpose', 'QUEEN');
 
@@ -72,6 +72,7 @@ function simulateTurn(state, hamletInput, gertrudeInput) {
         const gAction = gertrudeCmd.action;
 
         if (gAction === 'Barricade') {
+            context.gertrudeDisarmCooldown = false;
             // Relocate nearest furniture piece directly in front of Hamlet's rapier
             const targetX = Math.min(rapier.x + 1, polonius.x - 1);
             const targetY = rapier.y;
@@ -88,6 +89,7 @@ function simulateTurn(state, hamletInput, gertrudeInput) {
         }
 
         if (gAction === 'Interpose' && gertrude) {
+            context.gertrudeDisarmCooldown = false;
             // Reposition Gertrude directly into Hamlet's firing corridor
             gertrude.y = rapier.y;
             gertrude.x = Math.max(rapier.x + 1, Math.floor((rapier.x + polonius.x) / 2));
@@ -95,6 +97,7 @@ function simulateTurn(state, hamletInput, gertrudeInput) {
         }
 
         if (gAction === 'Repel' && rapier) {
+            context.gertrudeDisarmCooldown = false;
             // Kinetic pushback capped at 2 tiles so Hamlet gains net ground on a lunge
             const knockback = Math.max(1, Math.min(2, gParams.discreteSteps || 2));
             rapier.x = Math.max(1, rapier.x - knockback);
@@ -105,15 +108,29 @@ function simulateTurn(state, hamletInput, gertrudeInput) {
         }
 
         if (gAction === 'Disarm' && rapier) {
-            // Displace rapier vertically and detach from Hamlet
-            const shift = gParams.discreteSteps >= 3 ? 3 : 2;
-            if (rapier.y >= 12) rapier.y -= shift;
-            else if (rapier.y <= 2) rapier.y += shift;
-            else rapier.y += (Math.random() > 0.5 ? shift : -shift);
+            const distToRapier = gertrude ? (Math.abs(gertrude.x - rapier.x) + Math.abs(gertrude.y - rapier.y)) : 999;
+            const canDisarm = rapierAttached && distToRapier <= 3 && !context.gertrudeDisarmCooldown;
 
-            rapier.y = Math.max(1, Math.min(13, rapier.y));
-            rapierAttached = false;
-            defensiveIntervention = true;
+            if (canDisarm) {
+                // Displace rapier vertically and detach from Hamlet
+                const shift = gParams.discreteSteps >= 3 ? 3 : 2;
+                if (rapier.y >= 12) rapier.y -= shift;
+                else if (rapier.y <= 2) rapier.y += shift;
+                else rapier.y += (Math.random() > 0.5 ? shift : -shift);
+
+                rapier.y = Math.max(1, Math.min(13, rapier.y));
+                rapierAttached = false;
+                context.gertrudeDisarmCooldown = true;
+                defensiveIntervention = true;
+            } else {
+                // Fallback to Interpose when out of range, weapon already detached, or on cooldown
+                if (gertrude) {
+                    gertrude.y = rapier.y;
+                    gertrude.x = Math.max(rapier.x + 1, Math.floor((rapier.x + polonius.x) / 2));
+                    defensiveIntervention = true;
+                }
+                context.gertrudeDisarmCooldown = false;
+            }
         }
     }
 
@@ -352,10 +369,11 @@ function botHamletErratic(state) {
  * Vigilant Gertrude
  * Barricades with furniture, interposes, repels, or disarms when Hamlet advances.
  */
-function botGertrudeVigilant(state) {
+function botGertrudeVigilant(state, context = {}) {
     const rapier = getEntity(state, 'rapier');
     const polonius = getEntity(state, 'polonius');
     const gertrude = getEntity(state, 'gertrude');
+    const hamlet = getEntity(state, 'hamlet');
 
     if (!rapier || !polonius) return null;
 
@@ -365,6 +383,8 @@ function botGertrudeVigilant(state) {
         (e.type === 'furniture' || e.type === 'arras') &&
         e.x === rapier.x + 1 && e.y === rapier.y
     );
+    const rapierAttached = hamlet ? (hamlet.y === rapier.y && hamlet.x === rapier.x - 1) : false;
+    const distToRapier = gertrude ? (Math.abs(gertrude.x - rapier.x) + Math.abs(gertrude.y - rapier.y)) : 999;
 
     // 1. Point-blank range to Polonius (<= 2 tiles): Repel (1-2 tiles)
     if (distToTarget <= 2) {
@@ -378,8 +398,8 @@ function botGertrudeVigilant(state) {
     if (distToTarget <= 5 && sameY && gertrude && gertrude.y !== rapier.y) {
         return normalizeCommand({ action: 'Interpose', parameters: { agility: 0.8, discreteSteps: 2 } }, 'Interpose', 'QUEEN');
     }
-    // 4. Disarm chance if Hamlet is nearby and armed
-    if (distToTarget <= 4 && Math.random() > 0.5) {
+    // 4. Disarm check: only if within 3 paces, rapier is attached, and not on cooldown
+    if (distToRapier <= 3 && rapierAttached && !context.gertrudeDisarmCooldown && Math.random() > 0.5) {
         return normalizeCommand({ action: 'Disarm', parameters: { instability: 0.7, discreteSteps: 2 } }, 'Disarm', 'QUEEN');
     }
     // 5. Default tactical defense: Barricade corridor
@@ -396,6 +416,7 @@ function simulateMatch(config, hamletPersona = botHamletTactical, gertrudePerson
     const trajectory = [];
     const actionsUsed = [];
     let interventions = 0;
+    const context = { gertrudeDisarmCooldown: false };
 
     for (let turn = 0; turn < maxTurns; turn++) {
         const rapierBefore = getEntity(state, 'rapier');
@@ -404,11 +425,11 @@ function simulateMatch(config, hamletPersona = botHamletTactical, gertrudePerson
             : 20;
 
         const hCmd = hamletPersona(state);
-        const gCmd = gertrudePersona ? gertrudePersona(state) : null;
+        const gCmd = gertrudePersona ? gertrudePersona(state, context) : null;
 
         if (hCmd) actionsUsed.push(hCmd.action);
 
-        const result = simulateTurn(state, hCmd, gCmd);
+        const result = simulateTurn(state, hCmd, gCmd, context);
         if (result.defensiveIntervention) interventions++;
 
         const rapierAfter = getEntity(state, 'rapier');

@@ -108,6 +108,7 @@ async function createRoom(code) {
         roomCode: code,
         currentLineIndex: 0,
         currentLevel: level,
+        gertrudeDisarmCooldown: false,
         players: {
             HAMLET: null, // { socketId, token, connected }
             QUEEN: null
@@ -297,6 +298,7 @@ io.on('connection', (socket) => {
             // Reset scene with fresh evolved level
             room.currentLineIndex = 0;
             room.currentLevel = await loadRandomEliteLevel();
+            room.gertrudeDisarmCooldown = false;
 
             io.to(code).emit('roles-swapped', {
                 hamletToken: room.players.HAMLET ? room.players.HAMLET.token : null,
@@ -323,6 +325,7 @@ io.on('connection', (socket) => {
 
             room.currentLineIndex = 0;
             room.currentLevel = await loadRandomEliteLevel();
+            room.gertrudeDisarmCooldown = false;
             io.to(code).emit('room-reset');
             broadcastRoomState(code);
 
@@ -421,7 +424,7 @@ async function handleTurnProcessing(req, res, roomCode) {
         commands.forEach(cmd => {
             const hCmd = playerRole === 'HAMLET' ? cmd : null;
             const gCmd = playerRole === 'QUEEN' ? cmd : null;
-            const res = simulateTurn(room.currentLevel.entities, hCmd, gCmd);
+            const res = simulateTurn(room.currentLevel.entities, hCmd, gCmd, room);
             if (res && res.poloniusKilled) poloniusKilled = true;
         });
 
@@ -466,7 +469,7 @@ async function handleCpuTurn(req, res, roomCode) {
     let breakdown = null;
 
     if (playerRole === 'QUEEN') {
-        const cmd = botGertrudeVigilant(room.currentLevel.entities);
+        const cmd = botGertrudeVigilant(room.currentLevel.entities, room);
         if (cmd) {
             commands = [cmd];
             const chosenAction = cmd.action;
@@ -553,7 +556,7 @@ async function handleCpuTurn(req, res, roomCode) {
     commands.forEach(cmd => {
         const hCmd = playerRole === 'HAMLET' ? cmd : null;
         const gCmd = playerRole === 'QUEEN' ? cmd : null;
-        const simRes = simulateTurn(room.currentLevel.entities, hCmd, gCmd);
+        const simRes = simulateTurn(room.currentLevel.entities, hCmd, gCmd, room);
         if (simRes && simRes.poloniusKilled) poloniusKilled = true;
     });
 
@@ -602,6 +605,7 @@ app.post('/api/room/:roomCode/reset', async (req, res) => {
     const room = await getOrCreateRoom(roomCode);
     room.currentLineIndex = 0;
     room.currentLevel = await loadRandomEliteLevel();
+    room.gertrudeDisarmCooldown = false;
     broadcastRoomState(roomCode);
     res.json({ success: true, level: room.currentLevel });
 });
@@ -611,6 +615,7 @@ app.post('/api/reset', async (req, res) => {
     const room = await getOrCreateRoom(roomCode);
     room.currentLineIndex = 0;
     room.currentLevel = await loadRandomEliteLevel();
+    room.gertrudeDisarmCooldown = false;
     broadcastRoomState(roomCode);
     res.json({ success: true, level: room.currentLevel });
 });

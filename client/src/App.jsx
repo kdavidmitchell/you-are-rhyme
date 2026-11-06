@@ -744,7 +744,7 @@ function App() {
                     <span className="move-trigger">Misquote / Corrupt Verse</span>
                   </div>
                   <p className="move-desc">
-                    Dislodges the Prince's weapon from his grip. <strong>When to use:</strong> When Hamlet is lined up for a lethal thrust, buying precious measures.
+                    Knocks the rapier from Hamlet's hands within 3 paces (1-turn cooldown). <strong>When to use:</strong> In close combat when Hamlet is lined up for a lethal thrust.
                   </p>
                 </div>
               </div>

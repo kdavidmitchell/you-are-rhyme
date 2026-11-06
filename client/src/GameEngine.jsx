@@ -9,6 +9,7 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
     const [prevConfigId, setPrevConfigId] = useState(config?.id);
     const containerRef = React.useRef(null);
     const [scale, setScale] = useState(1);
+    const gertrudeDisarmCooldownRef = React.useRef(false);
 
     React.useEffect(() => {
         const updateScale = () => {
@@ -43,6 +44,7 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
     if (!simulationPhase && config?.id && config.id !== prevConfigId) {
         setPrevConfigId(config.id);
         setEntities(config.entities || []);
+        gertrudeDisarmCooldownRef.current = false;
     }
 
     // Handle incoming parameterized commands
@@ -80,6 +82,7 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
                         // GERTRUDE DEFENSES
                         // -------------------------------------------------------------
                         if (action === 'Barricade') {
+                            gertrudeDisarmCooldownRef.current = false;
                             // Relocate nearest furniture piece directly in front of Hamlet's rapier
                             const targetX = Math.min(rapier.x + 1, polonius.x - 1);
                             const targetY = rapier.y;
@@ -94,11 +97,13 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
                         }
 
                         if (action === 'Interpose' && gertrude) {
+                            gertrudeDisarmCooldownRef.current = false;
                             gertrude.y = rapier.y;
                             gertrude.x = Math.max(rapier.x + 1, Math.floor((rapier.x + polonius.x) / 2));
                         }
 
                         if (action === 'Repel' && rapier) {
+                            gertrudeDisarmCooldownRef.current = false;
                             // Capped at 2 tiles so Hamlet gains net ground on forward lunges
                             const knockback = Math.max(1, Math.min(2, discreteSteps));
                             rapier.x = Math.max(1, rapier.x - knockback);
@@ -108,13 +113,26 @@ const GameEngine = ({ config, commands, simulationPhase, onTurnEnd, onHamletWin 
                         }
 
                         if (action === 'Disarm' && rapier) {
-                            const shift = discreteSteps >= 3 ? 3 : 2;
-                            if (rapier.y >= 12) rapier.y -= shift;
-                            else if (rapier.y <= 2) rapier.y += shift;
-                            else rapier.y += (Math.random() > 0.5 ? shift : -shift);
+                            const distToRapier = gertrude ? (Math.abs(gertrude.x - rapier.x) + Math.abs(gertrude.y - rapier.y)) : 999;
+                            const canDisarm = rapierAttached && distToRapier <= 3 && !gertrudeDisarmCooldownRef.current;
 
-                            rapier.y = Math.max(1, Math.min(13, rapier.y));
-                            rapierAttached = false;
+                            if (canDisarm) {
+                                const shift = discreteSteps >= 3 ? 3 : 2;
+                                if (rapier.y >= 12) rapier.y -= shift;
+                                else if (rapier.y <= 2) rapier.y += shift;
+                                else rapier.y += (Math.random() > 0.5 ? shift : -shift);
+
+                                rapier.y = Math.max(1, Math.min(13, rapier.y));
+                                rapierAttached = false;
+                                gertrudeDisarmCooldownRef.current = true;
+                            } else {
+                                // Fallback to Interpose when out of range, weapon already detached, or on cooldown
+                                if (gertrude) {
+                                    gertrude.y = rapier.y;
+                                    gertrude.x = Math.max(rapier.x + 1, Math.floor((rapier.x + polonius.x) / 2));
+                                }
+                                gertrudeDisarmCooldownRef.current = false;
+                            }
                         }
 
                         // -------------------------------------------------------------

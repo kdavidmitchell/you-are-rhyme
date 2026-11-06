@@ -148,6 +148,45 @@ function runTests() {
     const obstacleInFront = state.find(e => e.type === 'furniture' && e.x === rapierCurrent.x + 1 && e.y === rapierCurrent.y);
     assert(obstacleInFront, "Barricade must relocate or spawn furniture directly in front of the rapier");
 
+    // Test Gertrude Disarm mechanics (Range check, Cooldown, and Fallback)
+    const disarmCmd = createFormactionCommand(
+        'QUEEN',
+        'Disarm',
+        'rapier',
+        { magnitude: 0.5, discreteSteps: 2, charge: 0.1, agility: 0.1, instability: 0.8 },
+        { volume: 0.05, pauseDuration: 0, wpmDelta: 0, deviationScore: 0.5 }
+    );
+
+    // Case A: Out of range (distance > 3) -> should fallback to Interpose, rapier remains attached
+    const gertrudeEntity = state.find(e => e.type === 'gertrude');
+    const hamletEntity = state.find(e => e.type === 'hamlet');
+    const rapierEntity = state.find(e => e.type === 'rapier');
+    hamletEntity.x = 2; hamletEntity.y = 7;
+    rapierEntity.x = 3; rapierEntity.y = 7;
+    gertrudeEntity.x = 10; gertrudeEntity.y = 7; // Distance = 7 > 3
+    const contextA = { gertrudeDisarmCooldown: false };
+
+    simulateTurn(state, null, disarmCmd, contextA);
+    assert.strictEqual(contextA.gertrudeDisarmCooldown, false, "Disarm out of range should not activate cooldown");
+    assert.strictEqual(rapierEntity.y, 7, "Disarm out of range should not shift rapier Y");
+    assert.strictEqual(gertrudeEntity.y, rapierEntity.y, "Disarm out of range should fallback to Interpose");
+
+    // Case B: In range (distance <= 3) and armed -> should succeed, displace rapier, and activate cooldown
+    gertrudeEntity.x = 5; gertrudeEntity.y = 7; // Distance = 2 <= 3
+    hamletEntity.x = 2; hamletEntity.y = 7;
+    rapierEntity.x = 3; rapierEntity.y = 7;
+    const contextB = { gertrudeDisarmCooldown: false };
+
+    simulateTurn(state, null, disarmCmd, contextB);
+    assert.strictEqual(contextB.gertrudeDisarmCooldown, true, "Successful Disarm must activate cooldown");
+    assert.notStrictEqual(rapierEntity.y, 7, "Successful Disarm must displace rapier vertically");
+
+    // Case C: Consecutive Disarm while on cooldown -> must block Disarm and fallback to Interpose
+    const rapierYBeforeCooldownDisarm = rapierEntity.y;
+    simulateTurn(state, null, disarmCmd, contextB);
+    assert.strictEqual(contextB.gertrudeDisarmCooldown, false, "Blocked Disarm should consume/clear cooldown");
+    assert.strictEqual(rapierEntity.y, rapierYBeforeCooldownDisarm, "Blocked Disarm must not displace rapier further");
+
     console.log(" -> Parameterized Grid Simulation tests passed.");
 
     // -------------------------------------------------------------------------
