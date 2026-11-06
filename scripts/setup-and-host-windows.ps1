@@ -1,5 +1,5 @@
 # ==============================================================================
-# You Are Rhyme — Turnkey Windows Setup & Multiplayer Host Launcher
+# You Are Rhyme -- Turnkey Windows Setup and Multiplayer Host Launcher
 # Clones repo (branch kyle-multiplayer), installs dependencies, and launches host.
 # ==============================================================================
 
@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "   YOU ARE RHYME — WINDOWS HOSTING & AUTOMATIC MULTIPLAYER SETUP" -ForegroundColor Cyan
+Write-Host "   YOU ARE RHYME -- WINDOWS HOSTING AND AUTOMATIC MULTIPLAYER SETUP" -ForegroundColor Cyan
 Write-Host "   Act III, Scene IV: Hamlet vs. Queen Gertrude" -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host ""
@@ -28,7 +28,7 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 }
 Write-Host "[+] Git detected ($((git --version).Trim()))." -ForegroundColor Green
 
-# 2. Check for Node & npm
+# 2. Check for Node and npm
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Host "[!] Node.js is required but was not found in PATH." -ForegroundColor Yellow
     if (Get-Command winget -ErrorAction SilentlyContinue) {
@@ -200,28 +200,34 @@ try {
     Write-Host "-----------------------------------------------------------------" -ForegroundColor Gray
 
     if ($CloudflaredExe -and (Test-Path $CloudflaredExe)) {
-        Write-Host "Starting Cloudflare Quick Tunnel for remote HTTPS & microphone..." -ForegroundColor Cyan
+        Write-Host "Starting Cloudflare Quick Tunnel for remote HTTPS and microphone..." -ForegroundColor Cyan
         Write-Host "The public HTTPS link will be automatically extracted and opened in your browser!`n" -ForegroundColor Yellow
         Write-Host "Press Ctrl+C to stop the host." -ForegroundColor Gray
         Write-Host "=================================================================`n" -ForegroundColor Cyan
 
         $cfOpened = $false
-        & $CloudflaredExe tunnel --url http://localhost:3001 2>&1 | ForEach-Object {
-            $line = $_.ToString()
-            Write-Host $line
-            if (-not $cfOpened -and $line -match "(https://[a-zA-Z0-9.-]+\.trycloudflare\.com)") {
-                $cfUrl = $matches[1]
-                $cfOpened = $true
-                Write-Host "`n=================================================================" -ForegroundColor Green
-                Write-Host "   [Host] Cloudflare Quick Tunnel Established!" -ForegroundColor Green
-                Write-Host "   Opening chamber in your browser: $cfUrl" -ForegroundColor Yellow
-                Write-Host "=================================================================`n" -ForegroundColor Green
-                try {
-                    Start-Process $cfUrl
-                } catch {
-                    Write-Host "      [!] Could not launch browser automatically: $_" -ForegroundColor Yellow
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            & $CloudflaredExe tunnel --url http://localhost:3001 2>&1 | ForEach-Object {
+                $line = $_.ToString()
+                Write-Host $line
+                if (-not $cfOpened -and $line -match "(https://[a-zA-Z0-9.-]+\.trycloudflare\.com)") {
+                    $cfUrl = $matches[1]
+                    $cfOpened = $true
+                    Write-Host "`n=================================================================" -ForegroundColor Green
+                    Write-Host "   [Host] Cloudflare Quick Tunnel Established!" -ForegroundColor Green
+                    Write-Host "   Opening chamber in your browser: $cfUrl" -ForegroundColor Yellow
+                    Write-Host "=================================================================`n" -ForegroundColor Green
+                    try {
+                        Start-Process $cfUrl
+                    } catch {
+                        Write-Host "      [!] Could not launch browser automatically: $_" -ForegroundColor Yellow
+                    }
                 }
             }
+        } finally {
+            $ErrorActionPreference = $prevEAP
         }
     } else {
         Write-Host "`nServing locally at http://localhost:3001" -ForegroundColor Gray

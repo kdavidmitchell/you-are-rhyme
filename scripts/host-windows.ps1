@@ -1,5 +1,5 @@
 # ==============================================================================
-# You Are Rhyme — Dedicated Windows Multiplayer Host & Tunnel Launcher
+# You Are Rhyme -- Dedicated Windows Multiplayer Host and Tunnel Launcher
 # ==============================================================================
 
 [CmdletBinding()]
@@ -14,7 +14,7 @@ Set-Location $ProjectRoot
 
 Write-Host ""
 Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "   YOU ARE RHYME — THEATRICAL DUELING HOST ORCHESTRATOR (WINDOWS)" -ForegroundColor Cyan
+Write-Host "   YOU ARE RHYME -- THEATRICAL DUELING HOST ORCHESTRATOR (WINDOWS)" -ForegroundColor Cyan
 Write-Host "   Hosting Act III, Scene IV: Hamlet vs. Gertrude" -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 
@@ -149,28 +149,34 @@ try {
     Write-Host "-----------------------------------------------------------------" -ForegroundColor Gray
 
     if ($CloudflaredExe -and (Test-Path $CloudflaredExe)) {
-        Write-Host "Starting Cloudflare Quick Tunnel for remote HTTPS & microphone..." -ForegroundColor Cyan
+        Write-Host "Starting Cloudflare Quick Tunnel for remote HTTPS and microphone..." -ForegroundColor Cyan
         Write-Host "The public HTTPS link will be automatically extracted and opened in your browser!`n" -ForegroundColor Yellow
         Write-Host "Press Ctrl+C to terminate the host and all background services." -ForegroundColor Gray
         Write-Host "=================================================================`n" -ForegroundColor Cyan
 
         $cfOpened = $false
-        & $CloudflaredExe tunnel --url http://localhost:3001 2>&1 | ForEach-Object {
-            $line = $_.ToString()
-            Write-Host $line
-            if (-not $cfOpened -and $line -match "(https://[a-zA-Z0-9.-]+\.trycloudflare\.com)") {
-                $cfUrl = $matches[1]
-                $cfOpened = $true
-                Write-Host "`n=================================================================" -ForegroundColor Green
-                Write-Host "   [Host] Cloudflare Quick Tunnel Established!" -ForegroundColor Green
-                Write-Host "   Opening chamber in your browser: $cfUrl" -ForegroundColor Yellow
-                Write-Host "=================================================================`n" -ForegroundColor Green
-                try {
-                    Start-Process $cfUrl
-                } catch {
-                    Write-Host "      [!] Could not launch browser automatically: $_" -ForegroundColor Yellow
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        try {
+            & $CloudflaredExe tunnel --url http://localhost:3001 2>&1 | ForEach-Object {
+                $line = $_.ToString()
+                Write-Host $line
+                if (-not $cfOpened -and $line -match "(https://[a-zA-Z0-9.-]+\.trycloudflare\.com)") {
+                    $cfUrl = $matches[1]
+                    $cfOpened = $true
+                    Write-Host "`n=================================================================" -ForegroundColor Green
+                    Write-Host "   [Host] Cloudflare Quick Tunnel Established!" -ForegroundColor Green
+                    Write-Host "   Opening chamber in your browser: $cfUrl" -ForegroundColor Yellow
+                    Write-Host "=================================================================`n" -ForegroundColor Green
+                    try {
+                        Start-Process $cfUrl
+                    } catch {
+                        Write-Host "      [!] Could not launch browser automatically: $_" -ForegroundColor Yellow
+                    }
                 }
             }
+        } finally {
+            $ErrorActionPreference = $prevEAP
         }
     } else {
         Write-Host "`n[NOTE] 'cloudflared' was not found. Remote players over LAN can use http://<LAN-IP>:3001" -ForegroundColor Yellow
