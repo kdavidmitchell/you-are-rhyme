@@ -620,7 +620,6 @@ function App() {
   const tensionPercent = Math.min(100, Math.round(((lineIndex + 1) / totalLines) * 100));
   const previousSpeaker = lineIndex > 0 ? (currentLine?.speaker === 'HAMLET' ? 'QUEEN' : 'HAMLET') : null;
 
-  const isMyTurn = scriptState?.currentLine?.speaker === role;
 
   return (
     <div className="quarto-app">
