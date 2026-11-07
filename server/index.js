@@ -517,7 +517,7 @@ async function handleCpuTurn(req, res, roomCode) {
                 { action: 'Lunge', target: 'rapier', metricName: 'Resonant Volume (RMS)', rawMetric: 'High Kinetic Impetus', normScore: chosenAction === 'Lunge' ? 0.85 : 0.30, threshold: 0.25 },
                 { action: 'Pierce', target: 'rapier', metricName: 'Dramatic Silence', rawMetric: 'Penetrative Focus', normScore: chosenAction === 'Pierce' ? 0.80 : 0.25, threshold: 0.25 },
                 { action: 'Feint', target: 'rapier', metricName: 'Cadence Variation', rawMetric: 'Spatial Footwork', normScore: chosenAction === 'Feint' ? 0.75 : 0.20, threshold: 0.25 },
-                { action: 'Fracture', target: 'arras', metricName: 'Textual Corruption', rawMetric: 'Destructive Arc', normScore: chosenAction === 'Fracture' ? 0.80 : 0.15, threshold: 0.35 }
+                { action: 'Fracture', target: 'arras', metricName: 'Script Deviation', rawMetric: 'Destructive Arc', normScore: chosenAction === 'Fracture' ? 0.80 : 0.15, threshold: 0.35 }
             ];
             const totalW = hamletDrives.reduce((s, d) => s + d.normScore, 0);
             const drives = hamletDrives.map(d => ({

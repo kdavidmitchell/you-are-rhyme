@@ -164,7 +164,7 @@ function evaluateVocalInput(playerRole, expectedText, actualText, scores, pauseD
                 target: 'arras',
                 weight: normDeviation,
                 threshold: 0.35,
-                metricName: 'Textual Corruption',
+                metricName: 'Script Deviation',
                 rawMetric: `${Math.round(deviationScore * 100)}% altered`
             }
         ];
