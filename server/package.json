@@ -4,7 +4,9 @@
   "description": "Backend Orchestrator",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "test": "node ga.test.js && node integration.test.js && node multiplayer.test.js",
+    "ga": "node ga-runner.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

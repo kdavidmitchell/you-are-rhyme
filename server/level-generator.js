@@ -25,13 +25,17 @@ function generateLevel(levelId, genotype = null) {
     const gridHeight = 15;
     const entities = [];
 
-    // Polonius (Target, x: 18)
-    const poloniusY = Math.max(1, Math.min(13, genotype.poloniusY));
+    // The Arras (Barrier, x: 16)
+    const arrasStartY = Math.max(1, Math.min(6, genotype.arrasStartY || 2));
+    const arrasLength = Math.max(6, Math.min(10, genotype.arrasLength || 7));
+
+    // Polonius is concealed behind the Arras (Target, x: 18)
+    const rawPoloniusY = typeof genotype.poloniusY === 'number' ? genotype.poloniusY : (arrasStartY + 2);
+    const poloniusY = Math.max(arrasStartY, Math.min(arrasStartY + arrasLength - 1, rawPoloniusY));
     entities.push({ id: 'polonius', type: 'polonius', x: 18, y: poloniusY });
 
-    // The Arras (Barrier, x: 16)
-    for (let i = 0; i < genotype.arrasLength; i++) {
-        let y = genotype.arrasStartY + i;
+    for (let i = 0; i < arrasLength; i++) {
+        let y = arrasStartY + i;
         if (y < 14) {
             entities.push({ id: `arras_${i}`, type: 'arras', x: 16, y: y });
         }

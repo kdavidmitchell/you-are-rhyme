@@ -4,7 +4,10 @@ dist/
 build/
 *.sqlite
 python/venv/
+wagd-template/
 __pycache__/
 *.pyc
 .DS_Store
 .venv/
+bin/
+*.log
