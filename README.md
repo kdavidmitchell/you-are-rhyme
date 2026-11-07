@@ -1,127 +1,115 @@
-# you-are-rhyme
+# You Are Rhyme
 
-> A voice-activated theatrical dueling engine where the emotional weight, pace, and semantics of your spoken words dictate a multi-turn tactical grid battle.
-
-**you are rhyme** is an experimental interactive experience that chains local AI into a 2D grid-based tactical engine. By translating vocal performance (via Whisper) and script accuracy (via Levenshtein distance) into a custom Domain Specific Language (DSL), the game turns your real-world delivery of Hamlet (Act 3, Scene 4) into real-time game mechanics—all within levels procedurally generated and validated by genetic algorithms.
-
-## Architecture Overview
-
-The project is split into three main pillars:
-
-### 1. The Client (`/client`)
-A modern frontend built with **React** and **Vite**. 
-* **Audio Capture:** Records raw audio bytes during a player's "turn" and streams them to the server.
-* **Game Engine:** Renders the procedurally generated 20x15 grid stage and animates the discrete grid commands (e.g., Lunge +3) returned by the server.
-
-### 2. The AI Translation Pipeline (`/server` & `/python`)
-The backend orchestrator (Node.js/Express) receives audio and passes it through an AI pipeline:
-* **Transcription & Pacing:** A Python microservice using Whisper transcribes the audio and calculates the "dramatic pause duration" and words-per-minute pacing.
-* **Semantic Evaluation:** The backend calculates the Levenshtein distance between the raw transcription and the expected script line to measure script deviation.
-* **The DSL Compiler:** Resolves the player's acoustic performance into 8 character-specific tactical commands (Lunge, Feint, Pierce, Fracture for Hamlet; Repel, Interpose, Solidify, Disarm for Gertrude).
-
-### 3. Procedural Level Generation & Genetic Algorithms
-Levels are not hand-crafted. They are generated and rigorously tested offline:
-* **Level Generator:** Creates a JSON "genotype" mapping the grid coordinates for all stage elements (Arras boundaries, Furniture obstacles, and character starting positions).
-* **Bot Tester:** Evaluates fitness by simulating a 9-turn match between a Greedy Hamlet AI and a Greedy Gertrude AI. It ensures levels possess structural tension by seeking a defensive success rate of 20-30%—preventing unwinnable choke points.
-* **SQLite:** Validated levels are saved to `telemetry.sqlite` to be served to the frontend.
-
-## Getting Started
-
-### Prerequisites
-* [Node.js](https://nodejs.org/) (v18+)
-* [Python 3.8+](https://www.python.org/)
-
-### Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/YourUsername/you-are-rhyme.git
-   cd you-are-rhyme
-   ```
-
-2. **Setup the Python Environment:**
-   Because the startup script points to a local virtual environment, you must initialize it first:
-   ```bash
-   cd python
-   python -m venv .venv
-   # Activate venv (Windows: .venv\Scripts\activate | Mac/Linux: source .venv/bin/activate)
-   pip install -r requirements.txt
-   cd ..
-   ```
-
-3. **Install Dependencies:**
-   A root helper script will automatically install the root, server, and client dependencies.
-   ```bash
-   npm run install:all
-   ```
-
-4. **Spin Everything Up:**
-   Start the React frontend, Node backend, and Python transcriber all at once using `concurrently`.
-   ```bash
-   npm start
-   ```
-   
-5. **Play the Game:**
-   Open your web browser and navigate to [http://localhost:5173](http://localhost:5173) to enter the stage!
-
-   *(Note: To procedurally generate new levels offline, run `cd server && node ga-runner.js`)*
-
-5. **Play the Game:** 
-   Open your web browser and navigate to http://localhost:5173 to enter the stage!
-
-## Telemetry & Logging
-All player turns—including raw transcriptions, acoustic metrics, and the resulting DSL commands—are logged to `telemetry.sqlite` to help fine-tune the DSL compiler thresholds.
+> A voice-controlled theatrical game where the volume, timing, and accuracy of your spoken Shakespearean verse dictate an asymmetric 2D tactical duel between Prince Hamlet and Queen Gertrude (Act 3, Scene 4).
 
 ---
 
-## 2-Player Synchronous Multiplayer (Hamlet vs. Gertrude)
+## Requirements
 
-*You Are Rhyme* features a server-synchronized 1v1 multiplayer mode where one human actor portrays **Prince Hamlet** and another portrays **Queen Gertrude**.
+Before you begin, make sure your computer has the following installed:
 
-### Hosting with Windows
+1. **[Git](https://git-scm.com/)** — to download and update the repository.
+2. **[Node.js](https://nodejs.org/)** (v18 or higher) — runs the game server and web client.
+3. **[Python](https://www.python.org/)** (v3.10 or higher) — runs the local speech recognition service.
+4. **Working Microphone** — to capture your vocal delivery.
 
-You can host the multiplayer chamber on any Windows machine:
+---
 
-1. **Option A: Dedicated Host Launcher (Inside Clone)**
-   If you already cloned the repository:
-   ```cmd
-   npm run host:win
-   :: or simply double-click:
-   scripts\host-windows.bat
+## Quick Start
+
+### On macOS
+
+1. Open **Terminal** and clone the repository:
+   ```bash
+   git clone https://github.com/kdavidmitchell/you-are-rhyme.git
+   cd you-are-rhyme
    ```
 
-2. **Option B: Turnkey Windows Setup (Automatic Dependencies)**
-   For a clean or fresh Windows computer, run:
+2. Run the automated setup and host script:
+   ```bash
+   bash scripts/setup-and-host-mac.sh
+   ```
+   *This automatically sets up Python, installs all dependencies, configures an HTTPS tunnel for microphone access, and starts the game.*
+
+3. Open the URL printed in your terminal:
+   * **Local Play:** `http://localhost:5173`
+   * **Online Multiplayer:** Open the printed `https://xxxx.trycloudflare.com` link.
+
+---
+
+### On Windows
+
+1. Open **Command Prompt** or **PowerShell** and clone the repository:
+   ```cmd
+   git clone https://github.com/kdavidmitchell/you-are-rhyme.git
+   cd you-are-rhyme
+   ```
+
+2. Run the automated setup and host script:
    ```cmd
    scripts\setup-and-host-windows.bat
    ```
-   This will verify Git, Node.js, and Python, install dependencies, download `cloudflared.exe` automatically if needed, and start the host with a public HTTPS tunnel.
+   *(Or in PowerShell: `.\scripts\setup-and-host-windows.ps1`)*
 
-3. **Share the Link:**
-   The terminal will output local LAN addresses and a public HTTPS link (e.g. `https://xxxx.trycloudflare.com`).
-   * **Player 1 (Hamlet)** creates a chamber (e.g., `BARD`) and clicks **"Copy Invitation Link"**.
-   * **Player 2 (Gertrude)** opens the link and claims Queen Gertrude.
-   * Both actors enter the Queen's Closet stage and duel turn-by-turn.
+3. Open the URL printed in your terminal:
+   * **Local Play:** `http://localhost:5173`
+   * **Online Multiplayer:** Open the printed `https://xxxx.trycloudflare.com` link.
 
-### Hosting with the Mac Build Machine
+---
 
-You can host the multiplayer duel on your Mac build machine. To enable remote microphone recording over HTTPS without campus firewall hurdles, the host uses **Cloudflare Quick Tunnels** (`cloudflared`):
+## How to Play
 
-1. **Install cloudflared (optional, for instant public HTTPS):**
+1. **Choose Your Role**:
+   * **Prince Hamlet (Attacker)**: Advance across the stage and drive your rapier through the arras tapestry to strike Polonius.
+   * **Queen Gertrude (Defender)**: Protect Polonius by blocking firing lanes, placing furniture obstacles, and disarming Hamlet before the 18 dialogue lines expire.
+2. **Solo Practice (CPU Partner)**:
+   * Check **"Solo Practice (CPU Partner)"** in the lobby to rehearse against an automated tactical bot.
+3. **2-Player Multiplayer**:
+   * Player 1 clicks **"Create Chamber"** and shares the invitation link.
+   * Player 2 opens the link in their browser and claims the remaining character.
+   * Both actors take turns speaking their lines into their microphones.
+
+---
+
+## Spoken Formactions (Vocal Mechanics)
+
+| Character | Formaction | How to Perform | In-Game Effect |
+| :--- | :--- | :--- | :--- |
+| **Hamlet** | **Lunge** | Louder speech (RMS volume) | Advances rapier 1–4 tiles forward. If preceded by a pause, pierces 1 furniture obstacle. |
+| **Hamlet** | **Pierce** | Dramatic pause (> 1.5s) | Thrusts at least 3 tiles forward, passing through obstacles and piercing directly through the arras. |
+| **Hamlet** | **Feint** | Faster or slower tempo (cadence) | Dodges vertically toward Polonius' corridor, maneuvers around obstacles, or recovers a dropped blade. |
+| **Hamlet** | **Fracture** | Script deviation (improvisation) | Destroys the obstacle or arras tile directly ahead of the blade. |
+| **Gertrude**| **Barricade** | Dramatic pause (> 1.5s) | Slides the nearest furniture obstacle directly into Hamlet's line of fire. |
+| **Gertrude**| **Repel** | Louder speech (regal volume) | Knocks Hamlet's rapier back 1–2 tiles. |
+| **Gertrude**| **Interpose**| Faster or slower tempo (cadence) | Gertrude steps directly into the corridor midpoint to physically shield Polonius. |
+| **Gertrude**| **Disarm** | Script deviation (improvisation) | Deflects Hamlet's rapier vertically, forcing him to spend a turn feinting to retrieve it. |
+
+---
+
+## Manual Developer Setup (Optional)
+
+If you prefer to start each service manually:
+
+1. **Python Transcription Service:**
    ```bash
-   brew install cloudflared
+   cd python
+   python -m venv .venv
+   # Windows: .venv\Scripts\activate | macOS: source .venv/bin/activate
+   pip install -r requirements.txt
+   python transcriber.py
    ```
-
-2. **Launch the Mac Multiplayer Host:**
+2. **Game Server:**
    ```bash
-   npm run host:mac
-   # or: bash scripts/host-mac.sh
-   # or for turnkey setup on clean Mac:
-   # bash scripts/setup-and-host-mac.sh
+   npm install --prefix server
+   npm start --prefix server
    ```
-
-3. **Share the Link:**
-   The terminal will output a public HTTPS link (e.g. `https://xxxx.trycloudflare.com`).
-   * **Player 1 (Hamlet)** creates a chamber (e.g., `BARD`) and clicks **"Copy Invitation Link"**.
-   * **Player 2 (Gertrude)** opens the direct link (`https://xxxx.trycloudflare.com/?room=BARD`) and claims Queen Gertrude.
-   * Both actors enter the Queen's Closet stage and duel turn-by-turn.
+3. **Web Client:**
+   ```bash
+   npm install --prefix client
+   npm run dev --prefix client
+   ```
+4. **Offline Level Evolution (Optional):**
+   ```bash
+   npm run ga --prefix server
+   ```
+   *(Evolves a 5x5 MAP-Elites archive of levels playtested by bot personas. 9 pre-evolved levels are already seeded automatically on startup!)*
